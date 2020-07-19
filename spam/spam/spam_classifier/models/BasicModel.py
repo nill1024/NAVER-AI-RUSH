@@ -11,6 +11,7 @@ from sklearn.metrics import classification_report
 from spam.spam_classifier.datasets.dataset import Dataset
 from spam.spam_classifier.models.utils import Metrics, NSMLReportCallback, evaluate
 
+#
 
 class BasicModel:
     """
@@ -90,6 +91,8 @@ class BasicModel:
             'finetune': SGD(lr=1e-4, momentum=0.9),
             'full': Adam(lr=1e-4)
         }[stage]
+
+￼
 
     def fit_metrics(self) -> List[str]:
         return ['accuracy']

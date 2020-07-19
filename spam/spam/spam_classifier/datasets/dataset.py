@@ -19,6 +19,15 @@ class EmptyContentError(Exception):
 UNLABELED = -1
 
 
+"""
+첫번째로 알고싶은것:
+대체 어떻게 데이터의 라벨을 볼 수 있는가?
+
+두번째로 알고싶은것
+그렇다면 데이터를 어떻게 랜덤샘플링 시킬 것인가?
+
+"""
+
 class Dataset:
     """
     Basic dataset that can be used in combination with Keras fit_generator.
