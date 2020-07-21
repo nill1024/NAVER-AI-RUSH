@@ -24,3 +24,4 @@ def frozen_resnet(input_size, n_classes, local_weights="/resnets/resnet50v2_noto
     frozen_model = Model(model_.input, x)
 
     return frozen_model
+

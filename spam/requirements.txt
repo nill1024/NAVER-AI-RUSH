@@ -1,3 +1,5 @@
+# nsml: registry.navercorp.com/abuse-filtering-public/ai-rush-baseline:latest
+
 cachetools==4.1.0
 fire==0.3.1
 h5py==2.7.1

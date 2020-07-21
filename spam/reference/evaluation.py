@@ -38,6 +38,11 @@ def evaluate(prediction, ground_truth):
     score = (cls_report['monotone']['f1-score'] * cls_report['screenshot']['f1-score'] * cls_report['unknown'][
         'f1-score']) ** (1 / 3)
 
+    print(
+    f'Classification report for validation dataset:\n-----------------------------\n{cls_report}\n=============\n')
+
+    print(score)
+
     return score
 
 

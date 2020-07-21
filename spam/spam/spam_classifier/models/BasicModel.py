@@ -21,22 +21,29 @@ class BasicModel:
 
     def __init__(self, network_fn: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
         self.data: Dataset = dataset_cls(**kwargs_or_empty_dict(dataset_kwargs))
-        self.network: keras.Model = network_fn(**kwargs_or_empty_dict(network_kwargs))
+        self.network: keras.Model = network_fn(**kwargs_or_empty_dict(network_kwargs)) #frozen_resnet(input_size = input_size, n_classes)
         self.debug = False
 
     def fit(self, epochs_finetune, epochs_full, batch_size, debug=False):
         self.debug = debug
-        self.data.prepare()
+        self.data.prepare() # rearrange와 디렉토리 초기화
         self.network.compile(
             loss=self.loss(),
             optimizer=self.optimizer('finetune'),
             metrics=self.fit_metrics()
         )
 
+        print(self.data.len('train'))
+
         steps_per_epoch_train = int(self.data.len('train') / batch_size) if not self.debug else 2
         model_path_finetune = 'model_finetuned.h5'
-        train_gen, val_gen = self.data.train_val_gen(batch_size)
-        nsml.save(checkpoint='best')
+        train_gen, val_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
+        
+        nsml.save(checkpoint='best')# 근데 이게 왜 두개 있는지..?
+
+    # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
+    # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
+
         self.network.fit_generator(generator=train_gen,
                                    steps_per_epoch=steps_per_epoch_train,
                                    epochs=epochs_finetune,
@@ -49,6 +56,11 @@ class BasicModel:
                                    validation_data=val_gen,
                                    use_multiprocessing=True,
                                    workers=20)  # TODO change to be dependent on n_cpus
+
+        # finetuning 먼저 하는 듯
+        # finetuning은 초기값을 주기 위해서 하는 과정이라고 보면 된다.
+        # 합성곱 신경망의 미세조정(finetuning): 무작위 초기화 대신, 신경망을 ImageNet 1000 데이터셋 등으로 미리 학습한 신경망으로 초기화합니다. 
+        # 학습의 나머지 과정들은 평상시와 같습니다.
 
         self.network.load_weights(model_path_finetune)
         self.unfreeze()
@@ -71,10 +83,12 @@ class BasicModel:
                                        classes=self.data.classes),
                                    validation_data=val_gen,
                                    use_multiprocessing=True,
-                                   workers=20)
+                                   workers=20) # learning rate 어디서 조절할지 함 찾아보기
 
         self.network.load_weights(model_path_full)
-        nsml.save(checkpoint='best')
+        
+        nsml.save(checkpoint='b1') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
+        
         print('Done')
         self.metrics(gen=val_gen)
 
@@ -88,16 +102,15 @@ class BasicModel:
 
     def optimizer(self, stage: str) -> keras.optimizers.Optimizer:
         return {
-            'finetune': SGD(lr=1e-4, momentum=0.9),
+            'finetune': SGD(lr=1e-4, momentum=0.9), #여기 있었네 learning rate
+
             'full': Adam(lr=1e-4)
         }[stage]
-
-￼
-
+    
     def fit_metrics(self) -> List[str]:
         return ['accuracy']
 
-    def callbacks(self, model_path, model_prefix, patience, classes, val_gen):
+    def callbacks(self, model_path, model_prefix, patience, classes, val_gen): #이걸 수정하면 fit에 들어가는 옵션을 직접적으로 고치는 것임
         callbacks = [
             # TODO Change to the score we're using for ModelCheckpoint
             ReduceLROnPlateau(patience=3),  # TODO Change to cyclic LR
@@ -116,6 +129,8 @@ class BasicModel:
     def evaluate(self, test_dir: str) -> pd.DataFrame:
         """
 
+        이거 오로지 테스트에 쓰이는 함수라는거
+
         Args:
             test_dir: Path to the test dataset.
 
@@ -125,12 +140,14 @@ class BasicModel:
                 the model for the leaderboard.
 
         """
-        gen, filenames = self.data.test_gen(test_dir=test_dir, batch_size=64)
-        y_pred = self.network.predict_generator(gen)
+        gen, filenames = self.data.test_gen(test_dir=test_dir, batch_size=64) # 지금 이게 test data를 가지고 계산하는 애임
+        y_pred = self.network.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음.
+
+
         ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
         return ret
 
-    def metrics(self, gen) -> None:
+    def metrics(self, gen) -> None: # 현재 validation dataset을 이걸로 검증함
         """
         Generate and print metrics.
 
@@ -138,7 +155,7 @@ class BasicModel:
             gen: Keras generator for which to get metrics
             n_batches: How many batches that can be fetched from the data generator.
         """
-        y_true, y_pred = evaluate(data_gen=gen, model=self.network)
+        y_true, y_pred = evaluate(data_gen=gen, model=self.network) #주의 : 위에 있는 evaluate랑 다른 함수다. 이거 ㅁ르면 빅엿 먹는다.
         y_true, y_pred = [np.argmax(y, axis=1) for y in [y_true, y_pred]]
 
         cls_report = classification_report(
@@ -156,6 +173,8 @@ def bind_model(model: BasicModel):
     """
     Utility function to make the model work with leaderboard submission.
     """
+    #data = 상위 폴더의 class dataset을 말함
+    #network = keras.model
 
     def load(dirname, **kwargs):
         model.network.load_weights(f'{dirname}/model')

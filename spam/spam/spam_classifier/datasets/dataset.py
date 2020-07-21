@@ -67,7 +67,7 @@ class Dataset:
             validation_split=self.validation_fraction
         )
 
-        train_generator = train_datagen.flow_from_directory(
+        train_generator = train_datagen.flow_from_directory( # 이 디렉토리 안에 있음
             directory=self.base_dir / 'train',
             shuffle=True,
             batch_size=batch_size,
@@ -75,7 +75,7 @@ class Dataset:
             classes=self.classes,
             subset='training')
 
-        val_generator = train_datagen.flow_from_directory(
+        val_generator = train_datagen.flow_from_directory( # validation dataset 
             directory=self.base_dir / 'train',
             batch_size=batch_size,
             target_size=self.img_size[:-1],
@@ -125,7 +125,7 @@ class Dataset:
         """
         dataset = 'train'
         self._initialize_directory(dataset)
-        self._rearrange(dataset)
+        self._rearrange(dataset) #여기서 rearrange로 알아서 정렬하는 것 같음
 
     def _initialize_directory(self, dataset: str) -> None:
         """
