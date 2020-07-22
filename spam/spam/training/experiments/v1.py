@@ -9,7 +9,7 @@ config = {
     'fit_kwargs': {
         'batch_size': 128, #이거 근데 데이터 개수를 정확히 알아야 batch size로 나눌 수 있을 것 같은뎅
         'epochs_finetune': 3,
-        'epochs_full': 300,
+        'epochs_full': 50,
         'debug': False
     },
     'model_kwargs': {

@@ -39,12 +39,12 @@ class BasicModel:
         model_path_finetune = 'model_finetuned.h5'
         train_gen, val_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
         
-        nsml.save(checkpoint='best')# 근데 이게 왜 두개 있는지..?
+        #nsml.save(checkpoint='pretuned')# 근데 이게 왜 두개 있는지..?
 
     # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
     # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
 
-        self.network.fit_generator(generator=train_gen,
+        self.network.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
                                    steps_per_epoch=steps_per_epoch_train,
                                    epochs=epochs_finetune,
                                    callbacks=self.callbacks(
@@ -87,8 +87,9 @@ class BasicModel:
 
         self.network.load_weights(model_path_full)
         
-        nsml.save(checkpoint='b1') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
-        
+        nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
+        #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
+
         print('Done')
         self.metrics(gen=val_gen)
 
@@ -143,8 +144,9 @@ class BasicModel:
         gen, filenames = self.data.test_gen(test_dir=test_dir, batch_size=64) # 지금 이게 test data를 가지고 계산하는 애임
         y_pred = self.network.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음.
 
-
         ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
+
+        
         return ret
 
     def metrics(self, gen) -> None: # 현재 validation dataset을 이걸로 검증함

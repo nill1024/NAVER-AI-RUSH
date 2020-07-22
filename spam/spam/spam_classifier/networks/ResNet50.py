@@ -25,3 +25,5 @@ def frozen_resnet(input_size, n_classes, local_weights="/resnets/resnet50v2_noto
 
     return frozen_model
 
+r50 = ResNet50V2()
+r50.summary()
