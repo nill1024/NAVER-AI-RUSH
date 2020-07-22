@@ -84,9 +84,18 @@ precision : 모델이 True라고 분류한 것 중에서 실제 True인 것의 �
 * label smoothing (0.1), label smoothing (0.05)
 * Rotation
 * CutMix, MixUp
-* FocalLoss (edited) 
 
+* FocalLoss 
+다른 건 모르겠는데 focalLoss가 안되는건 좀.. 의외긴 함
 
+현재 undersampling 의 경우 imbalanced-learn이라는 패키지로 해결이 가능한 부분이긴 한데, docker로 어떻게 해야할지를 모르겠다.
+참고로 yonghye kwon이라는 분이 만든 랜덤샘플링이라는게, 언더샘플링이다.
+어쩐지 그냥 랜덤샘플링하는게 효과가 있을리가 없는데 뭔소린가 했네
+
+언더샘플링을 랜덤으로 했단 소리인 것이다. 주성분같은걸로 언더샘플링하면 참 좋을텐데.
+
+또 keras.applications에서 efficientnet이 없다고 나오는데, 왜 웹 api에는 있다는 듯이 나오는건지..^^?
+(https://keras.io/api/applications/ 참조)
 
 """
 
@@ -98,7 +107,7 @@ class Dataset:
 
     def __init__(self, classes, input_size):
         self.classes = classes
-        self.img_size = input_size
+        self.img_size = input_size # (256, 256, 3)
         self.base_dir = Path(mkdtemp())
         self._len = None
         self.validation_fraction = 0.2
@@ -121,13 +130,27 @@ class Dataset:
             val_generator: Keras data generator.
         """
         train_datagen = ImageDataGenerator(
-            preprocessing_function=preprocess_input,
+            preprocessing_function=preprocess_input, # keras.applications.resnet_v2.preprocess_input
             horizontal_flip=True,
+            # 이 부분 추가됨
+            vertical_flip=True,
+            featurewise_std_normalization=True, #현재 18 세션이 이게 적용되어 있음
+            #samplewise_std_normalization=True,
+            #
             zoom_range=0.2,
             width_shift_range=0.1,
             height_shift_range=0.1,
             validation_split=self.validation_fraction
         )
+
+        # horizontal_flip: 불리언. 인풋을 무작위로 가로로 뒤집습니다.
+        # vertical_flip: 불리언. 인풋을 무작위로 세로로 뒤집습니다.
+        # featurewise_std_normalization: 불리언. 인풋을 각 특성 내에서 데이터셋의 표준편차로 나눕니다.
+        # samplewise_std_normalization: 불리언. 각 인풋을 표준편차로 나눕니다.
+        # 이거 두개 다 된다고 함
+
+        #resampling & undersampling
+        #여기서 해야 함
 
         train_generator = train_datagen.flow_from_directory( # 이 디렉토리 안에 있음
             directory=self.base_dir / 'train',
@@ -187,7 +210,7 @@ class Dataset:
         """
         dataset = 'train'
         self._initialize_directory(dataset)
-        self._rearrange(dataset) #여기서 rearrange로 알아서 정렬하는 것 같음
+        self._rearrange_under(dataset) #여기서 rearrange로 알아서 정렬하는 것 같음
 
     def _initialize_directory(self, dataset: str) -> None:
         """
@@ -228,3 +251,49 @@ class Dataset:
                 warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
             else:
                 shutil.copy(src=src, dst=dst)
+
+    def _rearrange_under(self, dataset: str) -> None:
+        """
+        Then rearranges the files based on the attached metadata. The resulting format is
+        --
+         |-train
+             |-normal
+                 |-img0
+                 |-img1
+                 ...
+             |-montone
+                 ...
+             |-screenshot
+                 ...
+             |_unknown
+                 ...
+        """
+        output_dir = self.base_dir / dataset
+        src_dir = Path(DATASET_PATH) / dataset #dataset = 'train'
+        
+        metadata = pd.read_csv(src_dir / f'{dataset}_label')
+        print(metadata.head())
+
+        count_a = 0
+        for _, row in metadata.iterrows():
+            if row['annotation'] == UNLABELED: # 현재 unlabeled data는 이렇게 쓰이지 않고 있다는 거 참고.
+                continue
+            if row['annotation'] == 0: #normal
+                count_a += 1
+            if count_a > 4000:
+                continue
+            #근데 있는것도 undersampling하는 마당에 unlabeled를 어케 쓸 수 있을지 모르겠음
+
+            src = src_dir / 'train_data' / row['filename']
+            if not src.exists():
+                raise FileNotFoundError
+            dst = output_dir / self.classes[row['annotation']] / row['filename'] # row['annotation'] = 0이 normal임
+
+            # classes = ['normal', 'monotone', 'screenshot', 'unknown']
+
+            if dst.exists():
+                warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
+            else:
+                shutil.copy(src=src, dst=dst)
+
+    

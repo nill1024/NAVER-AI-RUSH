@@ -42,7 +42,7 @@ nsml submit nill1024/spam-1/~
 
 pip install git+https://github.com/n-CLAIR/nsml-local
 
-# nsml run 하였을 때 upload 된 session 파일들을 local machine 으로 가져온다고 하는데 정확히 뭔지 모르겠음
+# nsml run 하였을 때 upload 된 session 파일들을 local machine 으로 가져온다고 하는데 정확히 뭔지 모르겠음 (아마 로그이지 않을까?)
 
 nsml pull -v nsmlteam/mnist/4 ./
 
@@ -51,3 +51,11 @@ nsml pull -v nsmlteam/mnist/4 ./
 # 기본적으로 run과 같은 인자를 사용하는데, --checkpoint 있음 (checkpoint가 -c 인자를 가져감)
 
 nsml fork nill1024/spam-2/2 -g 5 
+
+# 세션 주석 추가
+
+nsml memo nsmlteam/mnist/4 "First trial"
+
+# Show leaderboard of dataset (뭘 말하는지 모르겠다.)
+
+nsml dataset board mnist

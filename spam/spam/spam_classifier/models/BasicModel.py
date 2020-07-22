@@ -27,6 +27,9 @@ class BasicModel:
     def fit(self, epochs_finetune, epochs_full, batch_size, debug=False):
         self.debug = debug
         self.data.prepare() # rearrange와 디렉토리 초기화
+
+        # 이 과정까지 진행했을 때 디렉토리가 정렬이 되기 때문에 이시점에서 언더샘플링 하던지
+
         self.network.compile(
             loss=self.loss(),
             optimizer=self.optimizer('finetune'),

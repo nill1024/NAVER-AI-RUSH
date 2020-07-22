@@ -1,3 +1,5 @@
+#잘됐던것 고정, 여기같은 경우에 spam-1
+
 from spam.spam_classifier.datasets.dataset import Dataset
 from spam.spam_classifier.models.BasicModel import BasicModel
 from spam.spam_classifier.networks.ResNet50 import frozen_resnet
@@ -9,7 +11,7 @@ config = {
     'fit_kwargs': {
         'batch_size': 128, #이거 근데 데이터 개수를 정확히 알아야 batch size로 나눌 수 있을 것 같은뎅
         'epochs_finetune': 3,
-        'epochs_full': 15,
+        'epochs_full': 30,
         'debug': False
     },
     'model_kwargs': {
