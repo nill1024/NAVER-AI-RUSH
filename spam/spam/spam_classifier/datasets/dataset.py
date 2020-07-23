@@ -11,6 +11,9 @@ from keras.applications.resnet_v2 import preprocess_input
 import pandas as pd
 from nsml.constants import DATASET_PATH
 
+from sklearn.preprocessing import MinMaxScaler
+
+#scaler = MinMaxScaler(feature_range=(0,1))
 
 class EmptyContentError(Exception):
     pass
@@ -44,7 +47,7 @@ nomalization의 경우 효과가 있다고 함.
 
 ## Dataset Information
 * normal: 61945
-* monotone: 649
+* monotone: 649 monotone data 특성상 적어도 잘 된다는 것을 생각해야 한다. 이 데이터가 좀 극단적이라 다른 애들과의 구별이 매우 뚜렷하기 때문임
 * screenshot: 1284
 * unknown: 4601
 * unlabeled: 128396
@@ -63,7 +66,6 @@ std:  [0.21313286 0.21373375 0.21965458]
 fit 에 network.compile의 fit_metrics 참조
 
 기억 안나서 recall이랑 precision 정리
-
 
 recall : 실제 True인 것 중에서 모델이 True라고 예측한 것의 비율
 precision : 모델이 True라고 분류한 것 중에서 실제 True인 것의 비율
@@ -96,6 +98,8 @@ precision : 모델이 True라고 분류한 것 중에서 실제 True인 것의 �
 
 또 keras.applications에서 efficientnet이 없다고 나오는데, 왜 웹 api에는 있다는 듯이 나오는건지..^^?
 (https://keras.io/api/applications/ 참조)
+
+learning late scheduler
 
 """
 
@@ -133,14 +137,15 @@ class Dataset:
             preprocessing_function=preprocess_input, # keras.applications.resnet_v2.preprocess_input
             horizontal_flip=True,
             # 이 부분 추가됨
-            vertical_flip=True,
-            featurewise_std_normalization=True, #현재 18 세션이 이게 적용되어 있음
-            #samplewise_std_normalization=True,
-            #
+            # vertical_flip=True,
+            # featurewise_std_normalization=True, #현재 18 세션이 이게 적용되어 있음
+            # samplewise_std_normalization=True,
+            # This ImageDataGenerator specifies `featurewise_std_normalization`, but it hasn't been fit on any training data. Fit it first by calling `.fit(numpy_data)`.
             zoom_range=0.2,
             width_shift_range=0.1,
             height_shift_range=0.1,
-            validation_split=self.validation_fraction
+            validation_split=self.validation_fraction,
+            #rescale=
         )
 
         # horizontal_flip: 불리언. 인풋을 무작위로 가로로 뒤집습니다.
@@ -158,7 +163,10 @@ class Dataset:
             batch_size=batch_size, # 여기 batch_size는 인자로 들어옴
             target_size=self.img_size[:-1],
             classes=self.classes,
-            subset='training')
+            subset='training',
+            class_mode='categorical')
+
+        # 찾아봤는데 min max scaler가 normalization에 해당된다고 함. 
 
         val_generator = train_datagen.flow_from_directory( # validation dataset 
             directory=self.base_dir / 'train',
@@ -184,11 +192,13 @@ class Dataset:
             files: [str]
                 A list of files. These are the same order as the images returned from the generator.
 
+
         """
         datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
         files = [str(p.name) for p in (Path(test_dir) / 'test_data').glob('*.*') if p.suffix not in ['.gif', '.GIF']]
         metadata = pd.DataFrame({'filename': files})
-        gen = datagen.flow_from_dataframe(metadata, directory=f'{test_dir}/test_data', x_col='filename',
+        gen = datagen.flow_from_dataframe(metadata, directory=
+        f'{test_dir}/test_data', x_col='filename',
                                           class_mode=None, shuffle=False, batch_size=batch_size)
         return gen, files
 
@@ -274,15 +284,18 @@ class Dataset:
         metadata = pd.read_csv(src_dir / f'{dataset}_label')
         print(metadata.head())
 
-        count_a = 0
+        counte = [0,0,0,0,0]
         for _, row in metadata.iterrows():
             if row['annotation'] == UNLABELED: # 현재 unlabeled data는 이렇게 쓰이지 않고 있다는 거 참고.
+                counte[4] += 1
                 continue
-            if row['annotation'] == 0: #normal
-                count_a += 1
-            if count_a > 4000:
-                continue
+            else: #normal
+                counte[row['annotation']] += 1
+
+
             #근데 있는것도 undersampling하는 마당에 unlabeled를 어케 쓸 수 있을지 모르겠음
+
+            print(counte)
 
             src = src_dir / 'train_data' / row['filename']
             if not src.exists():

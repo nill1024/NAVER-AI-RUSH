@@ -2,7 +2,7 @@ from keras import Input, Model
 from keras.applications.resnet_v2 import ResNet50V2
 from keras.layers import Flatten, Dense
 from os import path
-
+import efficientnet.keras as efn
 
 def frozen_resnet(input_size, n_classes, local_weights="/resnets/resnet50v2_notop.h5"):
     if local_weights and path.exists(local_weights):
@@ -17,14 +17,40 @@ def frozen_resnet(input_size, n_classes, local_weights="/resnets/resnet50v2_noto
         model_ = ResNet50V2(
             include_top=False,
             input_tensor=Input(shape=input_size))
+    #여기까지 초기값 주는 부분
+
     for layer in model_.layers:
-        layer.trainable = False
+        layer.trainable = False # 전이학습을 위해 freeze 한다는것 같다.
+
     x = Flatten(input_shape=model_.output_shape[1:])(model_.layers[-1].output)
     x = Dense(n_classes, activation='softmax')(x)
+    
     frozen_model = Model(model_.input, x)
 
     return frozen_model
 
-if __name__ == '__main__':
-    r50 = ResNet50V2()
-    r50.summary()
+en3 = efn.EfficientNetB3() # 찾을 수가 없다. 이거 왜 홈페이지에는 있는데 여기는 없는것이지..
+en3.summary()
+
+"""
+이 모델에는 'channels_first' 데이터 포맷(채널, 높이, 넓이)과 'channels_last' 데이터 포맷(높이, 넓이, 채널) 둘 모두 사용할 수 있습니다.
+
+이 모델의 디폴트 인풋 사이즈는 224x224입니다.
+
+인수
+include_top: 네트워크의 최상단에 완전 연결 레이어를 넣을지 여부.
+
+weights: None (임의의 초기값 설정) 혹은 'imagenet' (ImageNet에 대한 선행 학습) 중 하나.
+초기값이 그니까 저렇게 되어있다는 얘긴데 
+
+input_tensor: 모델의 이미지 인풋으로 사용할 수 있는 선택적 케라스 텐서 (다시말해, layers.Input()의 아웃풋).
+
+input_shape: 선택적 형태 튜플로, include_top이 False일 경우만 특정하십시오.
+(그렇지 않다면 인풋의 형태가 (224, 224, 3)이고 'channels_last' 데이터 포맷을 취하거나 혹은 인풋의 형태가 (3, 224, 224)이고 'channels_first' 데이터 포맷을 취해야 합니다). 인풋 채널이 정확히 3개여야 하며 넓이와 높이가 32 미만이어서는 안됩니다. 예시. (200, 200, 3)은 유효한 값입니다.
+pooling: 특성추출을 위한 선택적 풀링 모드로, include_top이 False일 경우 유효합니다.
+None은 모델의 아웃풋이 마지막 컨볼루션 레이어의 4D 텐서 아웃풋임을 의미합니다.
+'avg'는 글로벌 평균값 풀링이 마지막 컨볼루션 레이어의 아웃풋에 적용되어 모델의 아웃풋이 2D 텐서가 됨을 의미합니다.
+'max'는 글로벌 최대값 풀링이 적용됨을 의미합니다.
+classes: 이미지를 분류하기 위한 선택적 클래스의 수로, include_top이 True일 경우, 그리고 weights 인수가 따로 정해지지 않은 경우만 특정합니다.
+
+"""

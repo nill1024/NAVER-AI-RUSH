@@ -17,5 +17,9 @@ setup(
                       'pillow==7.1.2',
                       'requests==2.24.0',
                       'tqdm==4.46.1',
-                      'wget==3.2']
+                      'wget==3.2',
+                      'efficientnet=1.1.0',
+                      'scikit-image'
+                      
+                      ]
 )

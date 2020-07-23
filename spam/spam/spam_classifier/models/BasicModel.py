@@ -18,6 +18,7 @@ class BasicModel:
     A basic model that first finetunes the last layer of a pre-trained network, and then unfreezes all layers and
     train them.
     """
+    
 
     def __init__(self, network_fn: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
         self.data: Dataset = dataset_cls(**kwargs_or_empty_dict(dataset_kwargs))
@@ -145,7 +146,7 @@ class BasicModel:
 
         """
         gen, filenames = self.data.test_gen(test_dir=test_dir, batch_size=64) # 지금 이게 test data를 가지고 계산하는 애임
-        y_pred = self.network.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음.
+        y_pred = self.network.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음. 이걸 기준으로 다시 모델에 피드백시킬 수 있을 것 같다.(특히 unlabeled data)
 
         ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
 
@@ -187,6 +188,7 @@ def bind_model(model: BasicModel):
     def save(dirname, **kwargs):
         filename = f'{dirname}/model'
         print(f'Trying to save to {filename}')
+        
         model.network.save_weights(filename)
 
     def infer(test_dir, **kwargs):
