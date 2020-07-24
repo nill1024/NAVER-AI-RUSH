@@ -1,17 +1,19 @@
 from typing import Callable, List
 
 import keras
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+import tensorflow as tf
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, LearningRateScheduler
 from keras.optimizers import SGD, Adam
 import nsml
 import numpy as np
 import pandas as pd
+from spam.spam_classifier.models.others import scheduler
+
 from sklearn.metrics import classification_report
 
 from spam.spam_classifier.datasets.dataset import Dataset
 from spam.spam_classifier.models.utils import Metrics, NSMLReportCallback, evaluate
-
-#
+# from adamp import AdamP, SGDP 이거 torch로 되어있어서 찾아봐야 할듯
 
 class BasicModel:
     """
@@ -51,7 +53,7 @@ class BasicModel:
         self.network.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
                                    steps_per_epoch=steps_per_epoch_train,
                                    epochs=epochs_finetune,
-                                   callbacks=self.callbacks(
+                                   callbacks=self.callbacks_ft(
                                        model_path=model_path_finetune,
                                        model_prefix='last_layer_tuning',
                                        patience=5,
@@ -87,7 +89,7 @@ class BasicModel:
                                        classes=self.data.classes),
                                    validation_data=val_gen,
                                    use_multiprocessing=True,
-                                   workers=20) # learning rate 어디서 조절할지 함 찾아보기
+                                   workers=20) # 아아 그리고 말인데 learning rate scheduler는 여기다만 적용하는게 어덜까?
 
         self.network.load_weights(model_path_full)
         
@@ -107,13 +109,18 @@ class BasicModel:
 
     def optimizer(self, stage: str) -> keras.optimizers.Optimizer:
         return {
-            'finetune': SGD(lr=1e-4, momentum=0.9), #여기 있었네 learning rate
+            # 'finetune': SGDP(lr=1e-4, momentum=0.9), #여기 있었네 learning rate
+            # 'full': AdamP(lr=1e-4), #요것들 사용법 좀 알아봐야 함
 
+            #모멘텀은 원래 0.9를 쓰는게 일반적이라고 하는데, 어차피 다른걸 바꿀게 많기때문에 그냥 두는 것이 아마 좋을 듯
+
+            'finetune': SGD(lr=1e-4, momentum=0.9), #여기 있었네 learning rate
             'full': Adam(lr=1e-4)
         }[stage]
     
     def fit_metrics(self) -> List[str]:
         return ['accuracy']
+
 
     def callbacks(self, model_path, model_prefix, patience, classes, val_gen): #이걸 수정하면 fit에 들어가는 옵션을 직접적으로 고치는 것임
         callbacks = [
@@ -127,7 +134,29 @@ class BasicModel:
             ModelCheckpoint(model_path, monitor=f'val/{model_prefix}/macro avg/f1-score', verbose=1,
                             save_best_only=True, mode='max'),
             # TODO Change to the score we're using for ModelCheckpoint
+            LearningRateScheduler(scheduler, verbose=0), # 이렇게 하는거 맞나용..?
             EarlyStopping(patience=patience)  # EarlyStopping needs to be placed last, due to a bug fixed in tf2.2
+            
+            #추가
+
+        ]
+        return callbacks
+
+    def callbacks_ft(self, model_path, model_prefix, patience, classes, val_gen): #이걸 수정하면 fit에 들어가는 옵션을 직접적으로 고치는 것임
+        callbacks = [
+            # TODO Change to the score we're using for ModelCheckpoint
+            ReduceLROnPlateau(patience=3),  # TODO Change to cyclic LR
+            NSMLReportCallback(prefix=model_prefix),
+            Metrics(name=model_prefix,
+                    classes=classes,
+                    val_data=val_gen,
+                    n_val_samples=self.data.len('val') if not self.debug else 256),
+            ModelCheckpoint(model_path, monitor=f'val/{model_prefix}/macro avg/f1-score', verbose=1,
+                            save_best_only=True, mode='max'),
+            # TODO Change to the score we're using for ModelCheckpoint
+
+            EarlyStopping(patience=patience)  # EarlyStopping needs to be placed last, due to a bug fixed in tf2.2
+            
         ]
         return callbacks
 

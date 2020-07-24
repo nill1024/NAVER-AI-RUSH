@@ -18,8 +18,10 @@ setup(
                       'requests==2.24.0',
                       'tqdm==4.46.1',
                       'wget==3.2',
-                      'efficientnet=1.1.0',
-                      'scikit-image'
-                      
+                      'efficientnet==1.1.0',
+                      'scikit-image',
+                      'tensorflow==1.15.2',
+                      'adamp==0.2.0',
+                      #'opencv-python==4.3.0'
                       ]
 )

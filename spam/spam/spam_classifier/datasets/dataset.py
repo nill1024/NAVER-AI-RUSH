@@ -41,7 +41,7 @@ efficientnet : 많이들 쓰는거 보니 좋은 것 같음. 근데 모델 적�
 
 데이터 nomalization / batch normalization
 nomalization의 경우 효과가 있다고 함.
-
+batch normalization의 경우 레이어 안에 하는건데 이미 resnet 안에 되어있음
 
 아래는 1등님이 정리해주신 효과 있는것들과 없는것들
 
@@ -56,7 +56,7 @@ mean:  [0.55232704 0.51815085 0.48528248]
 std:  [0.21313286 0.21373375 0.21965458]
 
 우선 라벨 보는법부터 알아야 하는데, trainset의 경우에 label을 보는데에 무리가 없겠지만 testset의 라벨 혹은 f1 score를 볼 수 있는 것인지?
-정확히 말하면 trainset의 recall과 precision을 알 수 있는 방법이 있을지 모르겠다 (이거 알아야 하는뎅,,)
+정확히 말하면 testset의 recall과 precision을 알 수 있는 방법이 있을지 모르겠다 (이거 알아야 하는뎅,,)
 
 그리고 f1 score 특성상 recall이나 precision 둘다 무난한 편이 한쪽만 더 잘나오는것보다 훨씬 우수하게 점수가 뜨기 때문에
 언더샘플링이 훨씬 좋을 것 같음
@@ -74,6 +74,7 @@ precision : 모델이 True라고 분류한 것 중에서 실제 True인 것의 �
 일단 데이터가 아마 모델 자체보다 훨씬 크게 영향이 있을거라.. 이걸 핸들링하는걸 최우선으로 함.
 
 ## work
+
 * Scheduler: ReduceLROnPlateau < CosineAnnealing
 * Augmentation: horizontal flip, vertical flip, ColorJitter, AutoAugment(https://github.com/DeepVoltaire/AutoAugment)
 * Normalize with mean, std from dataset
@@ -168,13 +169,22 @@ class Dataset:
 
         # 찾아봤는데 min max scaler가 normalization에 해당된다고 함. 
 
+        # val_generator = train_datagen.flow_from_directory( # validation dataset 
+        #     directory=self.base_dir / 'train',
+        #     batch_size=batch_size,
+        #     target_size=self.img_size[:-1],
+        #     classes=self.classes,
+        #     shuffle=True,
+        #     subset='validation')
+
         val_generator = train_datagen.flow_from_directory( # validation dataset 
-            directory=self.base_dir / 'train',
+            directory=self.base_dir / 'vali',
             batch_size=batch_size,
             target_size=self.img_size[:-1],
             classes=self.classes,
-            shuffle=True,
-            subset='validation')
+            shuffle=True
+            )
+
         assert self.classes == list(iter(train_generator.class_indices))
 
         return train_generator, val_generator
@@ -220,6 +230,7 @@ class Dataset:
         """
         dataset = 'train'
         self._initialize_directory(dataset)
+        self._rearrange(dataset)
         self._rearrange_under(dataset) #여기서 rearrange로 알아서 정렬하는 것 같음
 
     def _initialize_directory(self, dataset: str) -> None:
@@ -278,11 +289,10 @@ class Dataset:
              |_unknown
                  ...
         """
-        output_dir = self.base_dir / dataset
+        output_dir = self.base_dir / 'vali'
         src_dir = Path(DATASET_PATH) / dataset #dataset = 'train'
         
         metadata = pd.read_csv(src_dir / f'{dataset}_label')
-        print(metadata.head())
 
         counte = [0,0,0,0,0]
         for _, row in metadata.iterrows():
@@ -291,11 +301,11 @@ class Dataset:
                 continue
             else: #normal
                 counte[row['annotation']] += 1
-
+            
+            if counte[row['annotation']] > 600:
+                continue
 
             #근데 있는것도 undersampling하는 마당에 unlabeled를 어케 쓸 수 있을지 모르겠음
-
-            print(counte)
 
             src = src_dir / 'train_data' / row['filename']
             if not src.exists():
@@ -308,5 +318,8 @@ class Dataset:
                 warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
             else:
                 shutil.copy(src=src, dst=dst)
+                
 
-    
+
+        print("===============================================================dataset status:")
+        print(counte)
