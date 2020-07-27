@@ -17,13 +17,12 @@ from spam.spam_classifier.datasets.dataset import Dataset
 from spam.spam_classifier.models.utils import Metrics, NSMLReportCallback, evaluate
 # from adamp import AdamP, SGDP 이거 torch로 되어있어서 찾아봐야 할듯
 
-class BasicModel:
+class EnsembleModel:
     """
     A basic model that first finetunes the last layer of a pre-trained network, and then unfreezes all layers and
     train them.
     """
     
-
     def __init__(self, network_fn: Callable, network_fn2: Callable, network_fn3: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
         self.data: Dataset = dataset_cls(**kwargs_or_empty_dict(dataset_kwargs))
         self.network: keras.Model = network_fn(**kwargs_or_empty_dict(network_kwargs)) #frozen_resnet(input_size = input_size, n_classes)
@@ -223,7 +222,7 @@ class BasicModel:
             f'Classification report for validation dataset:\n-----------------------------\n{cls_report}\n=============\n')
 
 
-def bind_model(model: BasicModel):
+def bind_model(model: EnsembleModel):
     """
     Utility function to make the model work with leaderboard submission.
     """
