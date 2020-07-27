@@ -95,17 +95,20 @@ class BasicModel:
 
         self.network.load_weights(model_path_full)
 
-        val_pred = self.network.predict_generator(val_gen)
-        print(val_pred.shape)
-        print(val_pred)
-
-        nsml.load(checkpoint='best',session='nill1024/spam-1/10') # 10번 resnet 92mb net 1 net_fn 1
-        nsml.load(checkpoint='full',session='nill1024/spam-1/53') # 53번 resi2 209mb net 2 net_fn 2
-        nsml.load(checkpoint='full',session='nill1024/spam-1/36') # 36번 efn3 43.4mb net 3 net_fn 3
+        nsml.load(checkpoint='best',session='nill1024/spam-2/3') # 10번 resnet 92mb net 1 net_fn 1
+        nsml.load(checkpoint='full',session='nill1024/spam-2/7') # 53번 resi2 209mb net 2 net_fn 2
+        nsml.load(checkpoint='full',session='nill1024/spam-2/6') # 36번 efn3 43.4mb net 3 net_fn 3
         
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
 
+        val_pred = self.network.predict_generator(val_gen)
+        print(val_pred.shape)
+        print(val_pred)
+        
+        val_pred2 = self.net2.predict_generator(val_gen)
+        print(val_pred2)
+        print(val_pred2+val_pred)
 
         print('Done')
         self.metrics(gen=val_gen)
