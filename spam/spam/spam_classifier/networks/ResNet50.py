@@ -103,8 +103,8 @@ def frozen_efnet3(input_size, n_classes):
     return frozen_model
 
 
-def frozen_efnet7(input_size, n_classes):
-    model_ = efn.EfficientNetB7(
+def frozen_efnet5(input_size, n_classes):
+    model_ = efn.EfficientNetB5(
             include_top=False,
             input_tensor=Input(shape=input_size),
             )

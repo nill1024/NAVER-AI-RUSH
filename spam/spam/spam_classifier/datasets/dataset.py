@@ -56,7 +56,7 @@ class Dataset:
             preprocessing_function=preprocess_input, # keras.applications.resnet_v2.preprocess_input
             horizontal_flip=True,
             # 이 부분 추가됨
-            # vertical_flip=True,
+            vertical_flip=True,
             # featurewise_std_normalization=True, #현재 18 세션이 이게 적용되어 있음
             # samplewise_std_normalization=True,
             # This ImageDataGenerator specifies `featurewise_std_normalization`, but it hasn't been fit on any training data. Fit it first by calling `.fit(numpy_data)`.

@@ -23,9 +23,11 @@ class BasicModel:
     """
     
 
-    def __init__(self, network_fn: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
+    def __init__(self, network_fn: Callable, network_fn2: Callable, network_fn3: Callable dataset_cls: Dataset, dataset_kwargs, network_kwargs):
         self.data: Dataset = dataset_cls(**kwargs_or_empty_dict(dataset_kwargs))
         self.network: keras.Model = network_fn(**kwargs_or_empty_dict(network_kwargs)) #frozen_resnet(input_size = input_size, n_classes)
+        self.net2: keras.Model = network_fn2(**kwargs_or_empty_dict(network_kwargs))
+        self.net3: keras.Model = network_fn3(**kwargs_or_empty_dict(network_kwargs)) 
         self.debug = False
 
     def fit(self, epochs_finetune, epochs_full, batch_size, debug=False):
@@ -48,8 +50,6 @@ class BasicModel:
 
     # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
     # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
-
-        
 
         self.network.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
                                    steps_per_epoch=steps_per_epoch_train,
@@ -97,10 +97,10 @@ class BasicModel:
         val_pred = self.network.predict_generator(val_gen)
         print(val_pred.shape)
         print(val_pred)
-
         
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
+
 
         print('Done')
         self.metrics(gen=val_gen)
@@ -140,7 +140,7 @@ class BasicModel:
             ModelCheckpoint(model_path, monitor=f'val/{model_prefix}/macro avg/f1-score', verbose=1,
                             save_best_only=True, mode='max'),
             # TODO Change to the score we're using for ModelCheckpoint
-            #LearningRateScheduler(scheduler, verbose=0), # 이렇게 하는거 맞나용..?
+            #LearningRateScheduler(scheduler, verbose=1), # 이렇게 하는거 맞나용..?
             EarlyStopping(patience=patience)  # EarlyStopping needs to be placed last, due to a bug fixed in tf2.2
             
             #추가
