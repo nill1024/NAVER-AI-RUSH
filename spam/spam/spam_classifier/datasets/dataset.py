@@ -94,13 +94,15 @@ class Dataset:
             target_size=self.img_size[:-1],
             classes=self.classes,
             shuffle=True,
-            subset='validation')
+            subset='validation',
+            )
 
         unl_generator = train_datagen.flow_from_directory(
             directory=self.base_dir / 'unlabeled',
             batch_size=batch_size,
             target_size=self.img_size[:-1],
-            shuffle=True
+            shuffle=True,
+            classes=['unlabeled']
         )
 
         # val_generator = train_datagen.flow_from_directory( # validation dataset 
@@ -187,15 +189,18 @@ class Dataset:
         output_dir = self.base_dir / dataset
         unl = self.base_dir / 'unlabeled'
         unl.mkdir()
+        unl2 = unl / 'unlabeled'
+        unl2.mkdir()
         
         src_dir = Path(DATASET_PATH) / dataset
         metadata = pd.read_csv(src_dir / f'{dataset}_label')
         for _, row in metadata.iterrows():
+            src = src_dir / 'train_data' / row['filename']
             if row['annotation'] == UNLABELED:
-                dst = unl / row['filename']
+                
+                dst = unl2 / row['filename']
                 shutil.copy(src=src, dst=dst)
                 continue
-            src = src_dir / 'train_data' / row['filename']
             
             if not src.exists():
                 raise FileNotFoundError
@@ -205,60 +210,3 @@ class Dataset:
                 warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
             else:
                 shutil.copy(src=src, dst=dst)
-
-    def _rearrange_under(self, dataset: str) -> None:
-        """
-        Then rearranges the files based on the attached metadata. The resulting format is
-        --
-         |-train
-             |-normal
-                 |-img0
-                 |-img1
-                 ...
-             |-montone
-                 ...
-             |-screenshot
-                 ...
-             |_unknown
-                 ...
-        """
-        output_dir = self.base_dir / 'vali'
-        output_dir.mkdir()
-        for i in range(4):
-            aa = output_dir / str(i)
-            aa.mkdir()
-
-        src_dir = Path(DATASET_PATH) / dataset #dataset = 'train'
-        
-        metadata = pd.read_csv(src_dir / f'{dataset}_label')
-
-        counte = [0,0,0,0,0]
-        for _, row in metadata.iterrows():
-            if row['annotation'] == UNLABELED: # 현재 unlabeled data는 이렇게 쓰이지 않고 있다는 거 참고.
-                counte[4] += 1
-                continue
-            else: #normal
-                counte[row['annotation']] += 1
-            
-            if counte[row['annotation']] > 600:
-                continue
-
-            #근데 있는것도 undersampling하는 마당에 unlabeled를 어케 쓸 수 있을지 모르겠음
-
-            src = src_dir / 'train_data' / row['filename']
-            if not src.exists():
-                raise FileNotFoundError
-
-            dst = output_dir / self.classes[row['annotation']] / row['filename'] # row['annotation'] = 0이 normal임
-
-            # classes = ['normal', 'monotone', 'screenshot', 'unknown']
-
-            if dst.exists():
-                warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
-            else:
-                shutil.copy(src=src, dst=dst)
-                
-
-
-        print("=============================================================val_dataset status: ==================================================")
-        print(counte)

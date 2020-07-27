@@ -10,6 +10,7 @@ import pandas as pd
 from spam.spam_classifier.models.others import scheduler
 
 from sklearn.metrics import classification_report
+from sklearn.ensemble import VotingClassifier # vote로 할수도 있고, 값 평균값을 내서 하는 방식도 가능할 것 같다.
 
 from spam.spam_classifier.datasets.dataset import Dataset
 from spam.spam_classifier.models.utils import Metrics, NSMLReportCallback, evaluate
@@ -39,8 +40,6 @@ class BasicModel:
             metrics=self.fit_metrics()
         )
 
-        print(self.data.len('train'))
-
         steps_per_epoch_train = int(self.data.len('train') / batch_size) if not self.debug else 2
         model_path_finetune = 'model_finetuned.h5'
         train_gen, val_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
@@ -49,6 +48,8 @@ class BasicModel:
 
     # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
     # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
+
+        
 
         self.network.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
                                    steps_per_epoch=steps_per_epoch_train,
@@ -94,8 +95,9 @@ class BasicModel:
         self.network.load_weights(model_path_full)
 
         val_pred = self.network.predict_generator(val_gen)
-        
-        
+        print(val_pred.shape)
+        print(val_pred)
+
         
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
