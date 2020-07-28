@@ -99,9 +99,9 @@ class BasicModel:
         print(val_pred.shape)
         print(val_pred)
 
-        nsml.load(checkpoint='best',session='nill1024/spam-1/10') # 10번 resnet 92mb net 1 net_fn 1
-        nsml.load(checkpoint='full',session='nill1024/spam-1/53') # 53번 resi2 209mb net 2 net_fn 2
-        nsml.load(checkpoint='full',session='nill1024/spam-1/36') # 36번 efn3 43.4mb net 3 net_fn 3
+        nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 10번 resnet 92mb net 1 net_fn 1
+        nsml.load(checkpoint='full',session='nill1024/spam-3/6') # 53번 resi2 209mb net 2 net_fn 2
+        nsml.load(checkpoint='full',session='nill1024/spam-3/9') # 36번 efn3 43.4mb net 3 net_fn 3
         
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
@@ -231,7 +231,7 @@ def bind_model(model: BasicModel):
             if str(Path(f'{dirname}/model').stat().st_size)[0] == '2':
                 model.net2.load_weights(f'{dirname}/model')
                 print("net 2 loaded")
-            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '4':
+            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '1':
                 model.net3.load_weights(f'{dirname}/model')
                 print("net 3 loaded")
             elif str(Path(f'{dirname}/model').stat().st_size)[0] == '9':
