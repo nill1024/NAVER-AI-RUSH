@@ -80,7 +80,7 @@ def frozen_resnet_i2(input_size, n_classes):
     x = Dense(n_classes, activation='softmax')(x)
     
     frozen_model = Model(model_.input, x)
-
+    print(len(frozen_model.layers))
     return frozen_model
 
 def frozen_efnet3(input_size, n_classes):
