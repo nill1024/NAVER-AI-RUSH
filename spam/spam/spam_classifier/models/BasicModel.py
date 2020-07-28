@@ -192,17 +192,12 @@ class BasicModel:
         y_pred2 = self.net2.predict_generator(gen)
         y_pred3 = self.net3.predict_generator(gen)
 
-        predicts = [y_pred1, y_pred2, y_pred3]
-        labels = []
-        for l in labels:
-            predict = np.argmax(l,axis=1)
-            labels.append(predict)
+        y_average = (y_pred1+y_pred2+y_pred3) / 3 #모델 하나 더 추가할것. 우선은 voting만 만듬
 
-        labels = np.array(labels)
-        labels = np.transpose(labels,(1,0))
-        labels = scipy.stats.mode(labels,axis=-1)[0]
-        labels = np.squeeze(labels)
-
+        p1 = np.argmax(y_pred1,axis=1)
+        p2 = np.argmax(y_pred2,axis=1)
+        p3 = np.argmax(y_pred3,axis=1)
+        
         ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
 
         return ret
