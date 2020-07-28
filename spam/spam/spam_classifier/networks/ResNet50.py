@@ -74,6 +74,7 @@ def frozen_resnet_i2(input_size, n_classes):
 
     for layer in model_.layers:
         layer.trainable = False # 전이학습을 위해 freeze 한다는것 같다.
+    print(len(model_.layers))
 
     x = Flatten(input_shape=model_.output_shape[1:])(model_.layers[-1].output)
     x = Dense(n_classes, activation='softmax')(x)

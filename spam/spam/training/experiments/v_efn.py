@@ -3,7 +3,7 @@
 from spam.spam_classifier.datasets.dataset import Dataset
 from spam.spam_classifier.models.BasicModel import BasicModel
 from spam.spam_classifier.networks.ResNet50 import frozen_resnet
-from spam.spam_classifier.networks.ResNet50 import frozen_efnet3
+from spam.spam_classifier.networks.ResNet50 import frozen_efnet5
 
 input_size = (256, 256, 3)
 classes = ['normal', 'monotone', 'screenshot', 'unknown']
@@ -16,7 +16,7 @@ config = {
         'debug': False #디버그하고싶으면 이거 True 로 하면 됨.
     },
     'model_kwargs': {
-        'network_fn': frozen_efnet3, #어떤 모델을 선택할지 사실상 여기서 조정하면 됨.
+        'network_fn': frozen_efnet5, #어떤 모델을 선택할지 사실상 여기서 조정하면 됨.
         'network_kwargs': {
             'input_size': input_size,
             'n_classes': len(classes)

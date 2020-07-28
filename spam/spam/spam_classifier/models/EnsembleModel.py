@@ -94,8 +94,10 @@ class EnsembleModel:
 
         self.network.load_weights(model_path_full)
 
-        nsml.load(checkpoint='best',session='nill1024/spam-2/3') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
-        nsml.load(checkpoint='full',session='nill1024/spam-2/7') # 7번 resi2 209mb net 2 net_fn 2
+        print(len(self.net2.layers))
+
+        nsml.load(checkpoint='b1',session='nill1024/spam-2/3') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
+        nsml.load(checkpoint='full',session='nill1024/spam-2/14') # 7번 resi2 209mb net 2 net_fn 2
         nsml.load(checkpoint='full',session='nill1024/spam-2/6') # 6번 efn3 43.4mb net 3 net_fn 3
         
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
