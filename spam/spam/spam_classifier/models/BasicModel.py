@@ -10,6 +10,8 @@ import pandas as pd
 from spam.spam_classifier.models.others import scheduler
 from pathlib import Path
 
+import scipy
+
 from sklearn.metrics import classification_report
 from sklearn.ensemble import VotingClassifier # vote로 할수도 있고, 값 평균값을 내서 하는 방식도 가능할 것 같다.
 
@@ -190,8 +192,16 @@ class BasicModel:
         y_pred2 = self.net2.predict_generator(gen)
         y_pred3 = self.net3.predict_generator(gen)
 
-        y_pred = (y_pred1 + y_pred2 + y_pred3) / 3
+        predicts = [y_pred1, y_pred2, y_pred3]
+        labels = []
+        for l in labels:
+            predict = np.argmax(l,axis=1)
+            labels.append(predict)
 
+        labels = np.array(labels)
+        labels = np.transpose(labels,(1,0))
+        labels = scipy.stats.mode(labels,axis=-1)[0]
+        labels = np.squeeze(labels)
 
         ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
 
