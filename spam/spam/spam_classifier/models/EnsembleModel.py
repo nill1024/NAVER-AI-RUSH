@@ -23,11 +23,12 @@ class EnsembleModel:
     train them.
     """
     
-    def __init__(self, network_fn: Callable, network_fn2: Callable, network_fn3: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
+    def __init__(self, network_fn: Callable, network_fn2: Callable, network_fn3: Callable, network_fn4: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
         self.data: Dataset = dataset_cls(**kwargs_or_empty_dict(dataset_kwargs))
-        self.network: keras.Model = network_fn(**kwargs_or_empty_dict(network_kwargs)) #frozen_resnet(input_size = input_size, n_classes)
+        self.net1: keras.Model = network_fn(**kwargs_or_empty_dict(network_kwargs)) #frozen_resnet(input_size = input_size, n_classes)
         self.net2: keras.Model = network_fn2(**kwargs_or_empty_dict(network_kwargs))
-        self.net3: keras.Model = network_fn3(**kwargs_or_empty_dict(network_kwargs)) 
+        self.net3: keras.Model = network_fn3(**kwargs_or_empty_dict(network_kwargs))
+        self.net4: keras.Model = network_fn4(**kwargs_or_empty_dict(network_kwargs))
         self.debug = False
 
     def fit(self, epochs_finetune, epochs_full, batch_size, debug=False):
@@ -36,7 +37,7 @@ class EnsembleModel:
 
         # 이 과정까지 진행했을 때 디렉토리가 정렬이 되기 때문에 이시점에서 언더샘플링 하던지
 
-        self.network.compile(
+        self.net1.compile(
             loss=self.loss(),
             optimizer=self.optimizer('finetune'),
             metrics=self.fit_metrics()
@@ -51,7 +52,7 @@ class EnsembleModel:
         # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
         # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
 
-        self.network.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
+        self.net1.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
                                    steps_per_epoch=steps_per_epoch_train,
                                    epochs=epochs_finetune,
                                    callbacks=self.callbacks_ft(
@@ -69,17 +70,17 @@ class EnsembleModel:
         # 합성곱 신경망의 미세조정(finetuning): 무작위 초기화 대신, 신경망을 ImageNet 1000 데이터셋 등으로 미리 학습한 신경망으로 초기화합니다. 
         # 학습의 나머지 과정들은 평상시와 같습니다.
 
-        self.network.load_weights(model_path_finetune)
+        self.net1.load_weights(model_path_finetune)
         self.unfreeze()
 
-        self.network.compile(
+        self.net1.compile(
             loss=self.loss(),
             optimizer=self.optimizer('full'),
             metrics=self.fit_metrics()
         )
 
         model_path_full = 'model_full.h5'
-        self.network.fit_generator(generator=train_gen,
+        self.net1.fit_generator(generator=train_gen,
                                    steps_per_epoch=steps_per_epoch_train,
                                    epochs=epochs_full,
                                    callbacks=self.callbacks(
@@ -92,31 +93,21 @@ class EnsembleModel:
                                    use_multiprocessing=True,
                                    workers=20) 
 
-        self.network.load_weights(model_path_full)
-
-        print(len(self.net2.layers))
+        self.net1.load_weights(model_path_full)
 
         nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
         nsml.load(checkpoint='full',session='nill1024/spam-3/6') # 7번 resi2 209mb net 2 net_fn 2
         nsml.load(checkpoint='full',session='nill1024/spam-3/9') # 6번 efn3 43.4mb net 3 net_fn 3
+        nsml.load(checkpoint='full',session='nill1024/spam-1/36')
         
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
-
-        val_pred = self.network.predict_generator(val_gen)
-        print(val_pred.shape)
-        print(val_pred)
-        
-        val_pred2 = self.net2.predict_generator(val_gen)
-        print(val_pred2)
-        print(val_pred2+val_pred)
-        print((val_pred2+val_pred)/2)
 
         print('Done')
         self.metrics(gen=val_gen)
 
     def unfreeze(self) -> None:
-        for layer in self.network.layers:
+        for layer in self.net1.layers:
             layer.trainable = True
 
     def loss(self) -> str:
@@ -191,11 +182,12 @@ class EnsembleModel:
 
         """
         gen, filenames = self.data.test_gen(test_dir=test_dir, batch_size=64) # 지금 이게 test data를 가지고 계산하는 애임
-        y_pred1 = self.network.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음. 이걸 기준으로 다시 모델에 피드백시킬 수 있을 것 같다.(특히 unlabeled data)
+        y_pred1 = self.net1.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음. 이걸 기준으로 다시 모델에 피드백시킬 수 있을 것 같다.(특히 unlabeled data)
         y_pred2 = self.net2.predict_generator(gen)
         y_pred3 = self.net3.predict_generator(gen)
+        y_pred4 = self.net4.predict_generator(gen)
 
-        y_pred = (y_pred1 + y_pred2 + y_pred3) / 3
+        y_pred = (y_pred1 + y_pred2 + y_pred3 + y_pred4)
 
 
         ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
@@ -210,7 +202,7 @@ class EnsembleModel:
             gen: Keras generator for which to get metrics
             n_batches: How many batches that can be fetched from the data generator.
         """
-        y_true, y_pred = evaluate(data_gen=gen, model=self.network) #주의 : 위에 있는 evaluate랑 다른 함수다. 이거 ㅁ르면 빅엿 먹는다.
+        y_true, y_pred = evaluate(data_gen=gen, model=self.net1) #주의 : 위에 있는 evaluate랑 다른 함수다. 이거 ㅁ르면 빅엿 먹는다.
         y_true, y_pred = [np.argmax(y, axis=1) for y in [y_true, y_pred]]
 
         cls_report = classification_report(
@@ -240,22 +232,28 @@ def bind_model(model: EnsembleModel):
                 model.net3.load_weights(f'{dirname}/model')
                 print("net 3 loaded")
             elif str(Path(f'{dirname}/model').stat().st_size)[0] == '9':
-                model.network.load_weights(f'{dirname}/model')
+                model.net1.load_weights(f'{dirname}/model')
                 print("net 1 loaded")
+            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '4':
+                model.net4.load_weights(f'{dirname}/model')
+                print("net 4 loaded")
         except:
-            model.network.load_weights(f'{dirname}/model1')
+            model.net1.load_weights(f'{dirname}/model1')
             model.net2.load_weights(f'{dirname}/model2')
             model.net3.load_weights(f'{dirname}/model3')
+            model.net4.load_weights(f'{dirname}/model4')
 
 
     def save(dirname, **kwargs):
         filename = f'{dirname}/model'
         print(f'Trying to save to {filename}'+'1')
-        model.network.save_weights(filename+'1')
+        model.net1.save_weights(filename+'1')
         print(f'Trying to save to {filename}'+'2')
         model.net2.save_weights(filename+'2')
         print(f'Trying to save to {filename}'+'3')
         model.net3.save_weights(filename+'3')
+        print(f'Trying to save to {filename}'+'4')
+        model.net4.save_weights(filename+'4')
 
     def infer(test_dir, **kwargs):
         return model.evaluate(test_dir)

@@ -1,10 +1,10 @@
-#log 찍어보는 테스트 세션용 
 
 from spam.spam_classifier.datasets.dataset import Dataset
 from spam.spam_classifier.models.EnsembleModel import EnsembleModel
 from spam.spam_classifier.networks.ResNet50 import frozen_efnet5
 from spam.spam_classifier.networks.ResNet50 import frozen_resnet_i2
 from spam.spam_classifier.networks.ResNet50 import frozen_resnet
+from spam.spam_classifier.networks.ResNet50 import frozen_efnet3
 
 input_size = (256, 256, 3)
 classes = ['normal', 'monotone', 'screenshot', 'unknown']
@@ -20,6 +20,7 @@ config = {
         'network_fn': frozen_resnet, #어떤 모델을 선택할지 사실상 여기서 조정하면 됨.
         'network_fn2' : frozen_resnet_i2,
         'network_fn3' : frozen_efnet5,
+        'network_fn4' : frozen_efnet3,
         'network_kwargs': {
             'input_size': input_size,
             'n_classes': len(classes)

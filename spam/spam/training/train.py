@@ -2,7 +2,8 @@ from importlib import import_module
 
 import nsml
 
-from spam.spam_classifier.models.BasicModel import bind_model
+import spam.spam_classifier.models.BasicModel as bm
+import spam.spam_classifier.models.EnsembleModel as em
 
 
 def train(experiment_name: str = 'v_res', pause: bool = False, mode: str = 'train'):
@@ -11,8 +12,11 @@ def train(experiment_name: str = 'v_res', pause: bool = False, mode: str = 'trai
 
     # print(type(model))
     # print(type(config))
+    if experiment_name == 'v_ensemble':
+        em.bind_model(model)
+    else:
+        bm.bind_model(model)
 
-    bind_model(model)
     if pause:
         nsml.paused(scope=locals())
     if mode == 'train':
