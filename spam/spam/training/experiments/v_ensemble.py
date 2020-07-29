@@ -1,7 +1,7 @@
 #log 찍어보는 테스트 세션용 
 
 from spam.spam_classifier.datasets.dataset import Dataset
-from spam.spam_classifier.models.BasicModel import BasicModel
+from spam.spam_classifier.models.EnsembleModel import EnsembleModel
 from spam.spam_classifier.networks.ResNet50 import frozen_efnet5
 from spam.spam_classifier.networks.ResNet50 import frozen_resnet_i2
 from spam.spam_classifier.networks.ResNet50 import frozen_resnet
@@ -9,7 +9,7 @@ from spam.spam_classifier.networks.ResNet50 import frozen_resnet
 input_size = (256, 256, 3)
 classes = ['normal', 'monotone', 'screenshot', 'unknown']
 config = {
-    'model': BasicModel,
+    'model': EnsembleModel,
     'fit_kwargs': {
         'batch_size': 32, #이거 근데 데이터 개수를 정확히 알아야 batch size로 나눌 수 있을 것 같은뎅
         'epochs_finetune': 1,

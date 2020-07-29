@@ -192,13 +192,37 @@ class BasicModel:
         y_pred2 = self.net2.predict_generator(gen)
         y_pred3 = self.net3.predict_generator(gen)
 
-        y_average = (y_pred1+y_pred2+y_pred3) / 3 #모델 하나 더 추가할것. 우선은 voting만 만듬
+        y_average = (y_pred1+y_pred2+y_pred3) #모델 하나 더 추가할것. 우선은 voting만 만듬
 
         p1 = np.argmax(y_pred1,axis=1)
         p2 = np.argmax(y_pred2,axis=1)
         p3 = np.argmax(y_pred3,axis=1)
-        
-        ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
+
+        y_pred = np.argmax(y_average, axis=1)
+
+        for i in range(len(p1)):
+            ma = [0,0,0,0]
+            ma[p1[i]] += 1
+            ma[p2[i]] += 1
+            ma[p3[i]] += 1
+
+            mx = 0
+            f = True
+            idx = -1
+            for mi in range(len(ma)): #지금 동작방식은 voting이 기본이지만, 만약 voting이 똑같을 경우 확률로 계산함
+                if mx < ma[mi]:
+                    mx = ma[mi]
+                    idx = mi
+                    f = True
+                elif mx == ma[mi]:
+                    f = False
+            
+            if f == True:
+                if idx == -1:
+                    print("exception occured") #현재 다 완성했는데 코드가 약간 길어서 오류가 생길 수 있으므로 함수로 만들고 테스트해보는걸 추천. 안그러면 성능이 떨어질때 뭐 때문인지 알 수 없을수 있음
+                y_pred[i] = idx
+
+        ret = pd.DataFrame({'filename': filenames, 'y_pred': y_pred})
 
         return ret
 
