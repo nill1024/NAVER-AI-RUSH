@@ -94,11 +94,6 @@ class BasicModel:
 
         self.network.load_weights(model_path_full)
 
-        val_pred = self.network.predict_generator(val_gen)
-        print(val_pred.shape)
-        print(val_pred)
-
-        
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
 
