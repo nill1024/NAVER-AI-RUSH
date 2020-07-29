@@ -8,9 +8,6 @@ import nsml
 import numpy as np
 import pandas as pd
 from spam.spam_classifier.models.others import scheduler
-from pathlib import Path
-
-import scipy
 
 from sklearn.metrics import classification_report
 from sklearn.ensemble import VotingClassifier # vote로 할수도 있고, 값 평균값을 내서 하는 방식도 가능할 것 같다.
@@ -26,11 +23,9 @@ class BasicModel:
     """
     
 
-    def __init__(self, network_fn: Callable, network_fn2: Callable, network_fn3: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
+    def __init__(self, network_fn: Callable, dataset_cls: Dataset, dataset_kwargs, network_kwargs):
         self.data: Dataset = dataset_cls(**kwargs_or_empty_dict(dataset_kwargs))
         self.network: keras.Model = network_fn(**kwargs_or_empty_dict(network_kwargs)) #frozen_resnet(input_size = input_size, n_classes)
-        self.net2: keras.Model = network_fn2(**kwargs_or_empty_dict(network_kwargs))
-        self.net3: keras.Model = network_fn3(**kwargs_or_empty_dict(network_kwargs)) 
         self.debug = False
 
     def fit(self, epochs_finetune, epochs_full, batch_size, debug=False):
@@ -51,8 +46,10 @@ class BasicModel:
         
         #nsml.save(checkpoint='pretuned')# 근데 이게 왜 두개 있는지..?
 
-        # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
-        # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
+    # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
+    # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
+
+        
 
         self.network.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
                                    steps_per_epoch=steps_per_epoch_train,
@@ -93,7 +90,7 @@ class BasicModel:
                                        classes=self.data.classes),
                                    validation_data=val_gen,
                                    use_multiprocessing=True,
-                                   workers=20) 
+                                   workers=20) # 아아 그리고 말인데 learning rate scheduler는 여기다만 적용하는게 어덜까?
 
         self.network.load_weights(model_path_full)
 
@@ -101,13 +98,9 @@ class BasicModel:
         print(val_pred.shape)
         print(val_pred)
 
-        nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 10번 resnet 92mb net 1 net_fn 1
-        nsml.load(checkpoint='full',session='nill1024/spam-3/6') # 53번 resi2 209mb net 2 net_fn 2
-        nsml.load(checkpoint='full',session='nill1024/spam-3/9') # 36번 efn3 43.4mb net 3 net_fn 3
         
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
-
 
         print('Done')
         self.metrics(gen=val_gen)
@@ -147,7 +140,7 @@ class BasicModel:
             ModelCheckpoint(model_path, monitor=f'val/{model_prefix}/macro avg/f1-score', verbose=1,
                             save_best_only=True, mode='max'),
             # TODO Change to the score we're using for ModelCheckpoint
-            #LearningRateScheduler(scheduler, verbose=1), # 이렇게 하는거 맞나용..?
+            #LearningRateScheduler(scheduler, verbose=0), # 이렇게 하는거 맞나용..?
             EarlyStopping(patience=patience)  # EarlyStopping needs to be placed last, due to a bug fixed in tf2.2
             
             #추가
@@ -188,42 +181,11 @@ class BasicModel:
 
         """
         gen, filenames = self.data.test_gen(test_dir=test_dir, batch_size=64) # 지금 이게 test data를 가지고 계산하는 애임
-        y_pred1 = self.network.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음. 이걸 기준으로 다시 모델에 피드백시킬 수 있을 것 같다.(특히 unlabeled data)
-        y_pred2 = self.net2.predict_generator(gen)
-        y_pred3 = self.net3.predict_generator(gen)
+        y_pred = self.network.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음. 이걸 기준으로 다시 모델에 피드백시킬 수 있을 것 같다.(특히 unlabeled data)
 
-        y_average = (y_pred1+y_pred2+y_pred3) #모델 하나 더 추가할것. 우선은 voting만 만듬
+        ret = pd.DataFrame({'filename': filenames, 'y_pred': np.argmax(y_pred, axis=1)})
 
-        p1 = np.argmax(y_pred1,axis=1)
-        p2 = np.argmax(y_pred2,axis=1)
-        p3 = np.argmax(y_pred3,axis=1)
-
-        y_pred = np.argmax(y_average, axis=1)
-
-        for i in range(len(p1)):
-            ma = [0,0,0,0]
-            ma[p1[i]] += 1
-            ma[p2[i]] += 1
-            ma[p3[i]] += 1
-
-            mx = 0
-            f = True
-            idx = -1
-            for mi in range(len(ma)): #지금 동작방식은 voting이 기본이지만, 만약 voting이 똑같을 경우 확률로 계산함
-                if mx < ma[mi]:
-                    mx = ma[mi]
-                    idx = mi
-                    f = True
-                elif mx == ma[mi]:
-                    f = False
-            
-            if f == True:
-                if idx == -1:
-                    print("exception occured") #현재 다 완성했는데 코드가 약간 길어서 오류가 생길 수 있으므로 함수로 만들고 테스트해보는걸 추천. 안그러면 성능이 떨어질때 뭐 때문인지 알 수 없을수 있음
-                y_pred[i] = idx
-
-        ret = pd.DataFrame({'filename': filenames, 'y_pred': y_pred})
-
+        
         return ret
 
     def metrics(self, gen) -> None: # 현재 validation dataset을 이걸로 검증함
@@ -256,30 +218,13 @@ def bind_model(model: BasicModel):
     #network = keras.model
 
     def load(dirname, **kwargs):
-        try:
-            if str(Path(f'{dirname}/model').stat().st_size)[0] == '2':
-                model.net2.load_weights(f'{dirname}/model')
-                print("net 2 loaded")
-            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '1':
-                model.net3.load_weights(f'{dirname}/model')
-                print("net 3 loaded")
-            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '9':
-                model.network.load_weights(f'{dirname}/model')
-                print("net 1 loaded")
-        except:
-            model.network.load_weights(f'{dirname}/model1')
-            model.net2.load_weights(f'{dirname}/model2')
-            model.net3.load_weights(f'{dirname}/model3')
-
+        model.network.load_weights(f'{dirname}/model')
 
     def save(dirname, **kwargs):
         filename = f'{dirname}/model'
-        print(f'Trying to save to {filename}'+'1')
-        model.network.save_weights(filename+'1')
-        print(f'Trying to save to {filename}'+'2')
-        model.net2.save_weights(filename+'2')
-        print(f'Trying to save to {filename}'+'3')
-        model.net3.save_weights(filename+'3')
+        print(f'Trying to save to {filename}')
+        
+        model.network.save_weights(filename)
 
     def infer(test_dir, **kwargs):
         return model.evaluate(test_dir)
