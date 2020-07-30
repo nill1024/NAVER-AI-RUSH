@@ -105,17 +105,11 @@ class Dataset:
             classes=['unlabeled']
         )
 
-        # val_generator = train_datagen.flow_from_directory( # validation dataset 
-        #     directory=self.base_dir / 'vali',
-        #     batch_size=batch_size,
-        #     target_size=self.img_size[:-1],
-        #     classes=self.classes,
-        #     shuffle=True
-        #     )
+        unl_files = [str(p.name) for p in (Path(self.base_dir) / 'unlabeled').glob('*.*') if p.suffix not in ['.gif', '.GIF']]
 
         assert self.classes == list(iter(train_generator.class_indices))
 
-        return train_generator, val_generator
+        return train_generator, val_generator, unl_generator, unl_files
 
     def test_gen(self, test_dir: str, batch_size: int):
         """

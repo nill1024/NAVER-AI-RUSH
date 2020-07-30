@@ -2,7 +2,7 @@ from importlib import import_module
 
 import nsml
 
-from spam.spam_classifier.models.BasicModel import bind_model
+from spam.spam_classifier.models.EnsembleModel import bind_model
 
 
 def train(experiment_name: str = 'v_res', pause: bool = False, mode: str = 'train'):
