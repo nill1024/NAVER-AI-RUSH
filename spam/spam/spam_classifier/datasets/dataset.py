@@ -58,7 +58,7 @@ class Dataset:
             preprocessing_function=preprocess_input, # keras.applications.resnet_v2.preprocess_input
             horizontal_flip=True,
             # 이 부분 추가됨
-            vertical_flip=True,
+            # vertical_flip=True,
             # featurewise_std_normalization=True, #현재 18 세션이 이게 적용되어 있음
             # samplewise_std_normalization=True,
             # This ImageDataGenerator specifies `featurewise_std_normalization`, but it hasn't been fit on any training data. Fit it first by calling `.fit(numpy_data)`.
@@ -113,8 +113,65 @@ class Dataset:
 
         return train_generator, val_generator, unl_gen, unl_files
 
-    def labeld_unl(self, df_unlabeled): #반환해야 하는 것은 슈도라벨 flow from directory
+    def labeld_unl(self, df_unlabeled, batch_size): #반환해야 하는 것은 슈도라벨 flow from directory
+        
+        output_dir = self.base_dir / 'unl_train'
+        output_dir.mkdir()
+        
+        out_l = output_dir / 'normal'
+        out_l.mkdir()
+        out_l = output_dir / 'monotone'
+        out_l.mkdir()
+        out_l = output_dir / 'screenshot'
+        out_l.mkdir()
+        out_l = output_dir / 'unknown'
+        out_l.mkdir()
+        
+        src_dir = self.base_dir / 'unlabeled' # dataset = 'train'
+        metadata = df_unlabeled
+        for _, row in metadata.iterrows():
+            src = src_dir / 'unlabeled' / row['filename']
+            if row['unl_pred'] == UNLABELED:
+                continue
+            
+            if not src.exists():
+                raise FileNotFoundError
+            
+            dst = output_dir / self.classes[row['unl_pred']] / row['filename']
+            if dst.exists():
+                warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
+            else:
+                shutil.copy(src=src, dst=dst)
 
+
+        unl_datagen = ImageDataGenerator(
+            preprocessing_function=preprocess_input, # keras.applications.resnet_v2.preprocess_input
+            horizontal_flip=True,
+            zoom_range=0.2,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            validation_split=self.validation_fraction,
+        )
+
+        train_generator = unl_datagen.flow_from_directory( # 이 디렉토리 안에 있음
+            directory=self.base_dir / 'unl_train',
+            shuffle=True,
+            batch_size=batch_size, # 여기 batch_size는 인자로 들어옴
+            target_size=self.img_size[:-1],
+            classes=self.classes,
+            subset='training',
+            )
+
+        val_generator = unl_datagen.flow_from_directory( # validation dataset 
+            directory=self.base_dir / 'unl_train',
+            batch_size=batch_size,
+            target_size=self.img_size[:-1],
+            classes=self.classes,
+            shuffle=True,
+            subset='validation',
+            )
+        
+        return train_generator, val_generator
 
     def test_gen(self, test_dir: str, batch_size: int):
         """
@@ -170,47 +227,6 @@ class Dataset:
             (dataset_path / c).mkdir()
 
     def _rearrange(self, dataset: str) -> None:
-        """
-        Then rearranges the files based on the attached metadata. The resulting format is
-        --
-         |-train
-             |-normal
-                 |-img0
-                 |-img1
-                 ...
-             |-montone
-                 ...
-             |-screenshot
-                 ...
-             |_unknown
-                 ...
-        """
-        output_dir = self.base_dir / dataset
-        unl = self.base_dir / 'unlabeled'
-        unl.mkdir()
-        unl2 = unl / 'unlabeled'
-        unl2.mkdir()
-        
-        src_dir = Path(DATASET_PATH) / dataset # dataset = 'train'
-        metadata = pd.read_csv(src_dir / f'{dataset}_label')
-        for _, row in metadata.iterrows():
-            src = src_dir / 'train_data' / row['filename']
-            if row['annotation'] == UNLABELED:
-                
-                dst = unl2 / row['filename']
-                shutil.copy(src=src, dst=dst)
-                continue
-            
-            if not src.exists():
-                raise FileNotFoundError
-            
-            dst = output_dir / self.classes[row['annotation']] / row['filename']
-            if dst.exists():
-                warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
-            else:
-                shutil.copy(src=src, dst=dst)
-
-        def _rearrange_unl(self, dataset: str) -> None:
         """
         Then rearranges the files based on the attached metadata. The resulting format is
         --

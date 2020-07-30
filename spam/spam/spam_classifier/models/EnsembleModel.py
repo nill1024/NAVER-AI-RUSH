@@ -114,7 +114,20 @@ class EnsembleModel:
 
         df_u = pd.DataFrame({'filename': unl_files, 'unl_pred': arg_unl})
         
-        
+        unl_train, unl_val = self.data.labeld_unl(df_u,batch_size)
+
+        self.net1.fit_generator(generator=unl_train,
+                            steps_per_epoch=steps_per_epoch_train,
+                            epochs=epochs_full,
+                            callbacks=self.callbacks(
+                                model_path=model_path_full,
+                                model_prefix='full_tuning',
+                                val_gen=val_gen, # 이거 일부러 unl_val은 안쓴다. 참고
+                                patience=10,
+                                classes=self.data.classes),
+                            validation_data=val_gen,
+                            use_multiprocessing=True,
+                            workers=20) 
 
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
