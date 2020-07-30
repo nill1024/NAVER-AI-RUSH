@@ -45,7 +45,7 @@ class EnsembleModel:
 
         steps_per_epoch_train = int(self.data.len('train') / batch_size) if not self.debug else 2
         model_path_finetune = 'model_finetuned.h5'
-        train_gen, val_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
+        train_gen, val_gen, unl_gen, unl_files = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
         
         #nsml.save(checkpoint='pretuned')# 근데 이게 왜 두개 있는지..?
 
@@ -97,6 +97,24 @@ class EnsembleModel:
 
         #nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
 
+        nsml.load(checkpoint='full',session='nill1024/spam-3/6')
+        nsml.load(checkpoint='full',session='nill1024/spam-3/9')
+        nsml.load(checkpoint='full',session='nill1024/spam-3/8')
+        
+        unl_pred1 = self.net2.predict_generator(unl_gen)
+        unl_pred2 = self.net3.predict_generator(unl_gen)
+        unl_pred3 = self.net4.predict_generator(unl_gen)
+
+        unl_pred = (unl_pred1+unl_pred2+unl_pred3)/3
+        arg_unl = np.argmax(unl_pred,axis=1)
+
+        for i in range(len(arg_unl)):
+            if unl_pred[i][arg_unl[i]] < 0.9:
+                arg_unl[i] = -1
+
+        df_u = pd.DataFrame({'filename': unl_files, 'unl_pred': arg_unl})
+        
+        
 
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full

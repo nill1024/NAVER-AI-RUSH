@@ -109,26 +109,12 @@ class Dataset:
 
         unl_files = [str(p.name) for p in (Path(self.base_dir) / 'unlabeled').glob('*.*') if p.suffix not in ['.gif', '.GIF']]
 
-        nsml.load(checkpoint='full',session='nill1024/spam-3/6')
-        nsml.load(checkpoint='full',session='nill1024/spam-3/9')
-        nsml.load(checkpoint='full',session='nill1024/spam-3/8')
-        
-        unl_pred1 = EnsembleModel.net2.predict_generator(unl_gen)
-        unl_pred2 = EnsembleModel.net3.predict_generator(unl_gen)
-        unl_pred3 = EnsembleModel.net4.predict_generator(unl_gen)
-
-        unl_pred = (unl_pred1+unl_pred2+unl_pred3)/3
-        arg_unl = np.argmax(unl_pred,axis=1)
-
-        for i in range(len(arg_unl)):
-            if unl_pred[i][arg_unl[i]] < 0.9:
-                arg_unl[i] = -1
-
-        df_u = pd.DataFrame({'filename': unl_files, 'unl_pred': arg_unl})
-
         assert self.classes == list(iter(train_generator.class_indices))
 
-        return train_generator, val_generator
+        return train_generator, val_generator, unl_gen, unl_files
+
+    def labeld_unl(self, df_unlabeled): #반환해야 하는 것은 슈도라벨 flow from directory
+
 
     def test_gen(self, test_dir: str, batch_size: int):
         """
@@ -205,7 +191,48 @@ class Dataset:
         unl2 = unl / 'unlabeled'
         unl2.mkdir()
         
-        src_dir = Path(DATASET_PATH) / dataset
+        src_dir = Path(DATASET_PATH) / dataset # dataset = 'train'
+        metadata = pd.read_csv(src_dir / f'{dataset}_label')
+        for _, row in metadata.iterrows():
+            src = src_dir / 'train_data' / row['filename']
+            if row['annotation'] == UNLABELED:
+                
+                dst = unl2 / row['filename']
+                shutil.copy(src=src, dst=dst)
+                continue
+            
+            if not src.exists():
+                raise FileNotFoundError
+            
+            dst = output_dir / self.classes[row['annotation']] / row['filename']
+            if dst.exists():
+                warn(f'File {src} already exists, this should not happen. Please notify 서동필 or 방지환.')
+            else:
+                shutil.copy(src=src, dst=dst)
+
+        def _rearrange_unl(self, dataset: str) -> None:
+        """
+        Then rearranges the files based on the attached metadata. The resulting format is
+        --
+         |-train
+             |-normal
+                 |-img0
+                 |-img1
+                 ...
+             |-montone
+                 ...
+             |-screenshot
+                 ...
+             |_unknown
+                 ...
+        """
+        output_dir = self.base_dir / dataset
+        unl = self.base_dir / 'unlabeled'
+        unl.mkdir()
+        unl2 = unl / 'unlabeled'
+        unl2.mkdir()
+        
+        src_dir = Path(DATASET_PATH) / dataset # dataset = 'train'
         metadata = pd.read_csv(src_dir / f'{dataset}_label')
         for _, row in metadata.iterrows():
             src = src_dir / 'train_data' / row['filename']

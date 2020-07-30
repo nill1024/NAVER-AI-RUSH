@@ -42,7 +42,7 @@ class BasicModel:
 
         steps_per_epoch_train = int(self.data.len('train') / batch_size) if not self.debug else 2
         model_path_finetune = 'model_finetuned.h5'
-        train_gen, val_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
+        train_gen, val_gen, unl_gen, unl_files = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
         
         #nsml.save(checkpoint='pretuned')# 근데 이게 왜 두개 있는지..?
 
