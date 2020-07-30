@@ -107,7 +107,9 @@ class Dataset:
             classes=['unlabeled']
         )
 
-        unl_files = [str(p.name) for p in (Path(self.base_dir) / 'unlabeled').glob('*.*') if p.suffix not in ['.gif', '.GIF']]
+        unl_files = [str(p.name) for p in (Path(self.base_dir) / 'unlabeled' / 'unlabeled').glob('*.*') if p.suffix not in ['.gif', '.GIF']]
+
+        #print(unl_files)
 
         assert self.classes == list(iter(train_generator.class_indices))
 
@@ -127,8 +129,13 @@ class Dataset:
         out_l = output_dir / 'unknown'
         out_l.mkdir()
         
+        print("mkdir completed")
+
         src_dir = self.base_dir / 'unlabeled' # dataset = 'train'
         metadata = df_unlabeled
+
+        print(metadata.head())
+
         for _, row in metadata.iterrows():
             src = src_dir / 'unlabeled' / row['filename']
             if row['unl_pred'] == UNLABELED:
@@ -143,7 +150,7 @@ class Dataset:
             else:
                 shutil.copy(src=src, dst=dst)
 
-
+        print("file rearrange completed")
         unl_datagen = ImageDataGenerator(
             preprocessing_function=preprocess_input, # keras.applications.resnet_v2.preprocess_input
             horizontal_flip=True,
@@ -250,6 +257,9 @@ class Dataset:
         
         src_dir = Path(DATASET_PATH) / dataset # dataset = 'train'
         metadata = pd.read_csv(src_dir / f'{dataset}_label')
+
+        print(metadata.head())
+
         for _, row in metadata.iterrows():
             src = src_dir / 'train_data' / row['filename']
             if row['annotation'] == UNLABELED:

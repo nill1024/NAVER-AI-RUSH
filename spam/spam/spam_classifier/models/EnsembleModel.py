@@ -98,8 +98,8 @@ class EnsembleModel:
 
         #nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
 
-        nsml.load(checkpoint='full',session='nill1024/spam-3/6')
         nsml.load(checkpoint='full',session='nill1024/spam-3/35')
+        nsml.load(checkpoint='full',session='nill1024/spam-1/53')
         nsml.load(checkpoint='best',session='nill1024/spam-1/10')
         
         unl_pred1 = self.net2.predict_generator(unl_gen)
@@ -109,12 +109,15 @@ class EnsembleModel:
         unl_pred = (unl_pred1+unl_pred2+unl_pred3)/3
         arg_unl = np.argmax(unl_pred,axis=1)
 
+        print("prediction completed")
         for i in range(len(arg_unl)):
             if unl_pred[i][arg_unl[i]] < 0.9:
                 arg_unl[i] = -1
 
         df_u = pd.DataFrame({'filename': unl_files, 'unl_pred': arg_unl})
         
+        print(df_u.head())
+
         unl_train, unl_val = self.data.labeld_unl(df_u,batch_size)
 
         model_path_full = 'model_full.h5'
