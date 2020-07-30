@@ -196,13 +196,14 @@ class EnsembleModel:
 
         y_pred = np.argmax(y_average, axis=1)
 
-        for i in range(len(p1)):
+        for i in range(len(p1)): #voting이 싫다면 이 for문 전체를 없애면 됨
             ma = [0,0,0,0]
             ma[p1[i]] += 1
             ma[p2[i]] += 1
             ma[p3[i]] += 1
             ma[p4[i]] += 1 #efn3 에 1표를 다 주기 때문에 조금 안좋아 지는듯 함. 아무래도 단일 모델 성능이 안좋은 경우면 앙상블에서 voting방식의 성능에 영향을 줄 수 있음
-
+                            #이 점 때문에 voting에서 한표를 다 안주는 방식으로 알고리즘을 짜게 되면, 기본적으로 average방식과 그 알고리즘이 유사해짐. average도 가중치를 주고 할 수 있는 거라
+                            #물론 얘를 가중치 주는거랑 저 위에걸 가중치 주는거랑은 살짝 다르긴 함. cross_entropy 때문에
             mx = 0
             f = True
             idx = -1

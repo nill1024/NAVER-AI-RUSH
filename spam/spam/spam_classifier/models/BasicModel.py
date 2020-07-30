@@ -42,7 +42,7 @@ class BasicModel:
 
         steps_per_epoch_train = int(self.data.len('train') / batch_size) if not self.debug else 2
         model_path_finetune = 'model_finetuned.h5'
-        train_gen, val_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
+        train_gen, val_gen, unl_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
         
         #nsml.save(checkpoint='pretuned')# 근데 이게 왜 두개 있는지..?
 
@@ -94,6 +94,9 @@ class BasicModel:
 
         self.network.load_weights(model_path_full)
 
+        unl_pred = self.network.predict_generator(unl_gen)
+        print(unl_pred)
+
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
 
@@ -135,7 +138,7 @@ class BasicModel:
             ModelCheckpoint(model_path, monitor=f'val/{model_prefix}/macro avg/f1-score', verbose=1,
                             save_best_only=True, mode='max'),
             # TODO Change to the score we're using for ModelCheckpoint
-            #LearningRateScheduler(scheduler, verbose=0), # 이렇게 하는거 맞나용..?
+            LearningRateScheduler(scheduler, verbose=0), # 이렇게 하는거 맞나용..?
             EarlyStopping(patience=patience)  # EarlyStopping needs to be placed last, due to a bug fixed in tf2.2
             
             #추가

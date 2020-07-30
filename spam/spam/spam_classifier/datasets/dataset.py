@@ -105,6 +105,8 @@ class Dataset:
             classes=['unlabeled']
         )
 
+        
+
         # val_generator = train_datagen.flow_from_directory( # validation dataset 
         #     directory=self.base_dir / 'vali',
         #     batch_size=batch_size,
@@ -115,7 +117,7 @@ class Dataset:
 
         assert self.classes == list(iter(train_generator.class_indices))
 
-        return train_generator, val_generator
+        return train_generator, val_generator, unl_generator
 
     def test_gen(self, test_dir: str, batch_size: int):
         """

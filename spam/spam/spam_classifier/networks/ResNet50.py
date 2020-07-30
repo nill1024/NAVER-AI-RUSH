@@ -123,3 +123,23 @@ def frozen_efnet5(input_size, n_classes):
     frozen_model = Model(model_.input, x)
 
     return frozen_model
+
+def frozen_efnet7(input_size, n_classes):
+    model_ = efn.EfficientNetB7(
+            include_top=False,
+            input_tensor=Input(shape=input_size),
+            )
+    #여기까지 초기값 주는 부분
+    #다른거 다 똑같이 하면 되는데 local weight같은 경우에 한번 찾아봐야 함
+
+    #돌려봤는데, 인터넷에서 알아서 초기값을 받아온다. 그냥 괜찮은듯 성능도 한번 돌려본 바에 의하면 좋고
+
+    for layer in model_.layers:
+        layer.trainable = False # 전이학습을 위해 freeze 한다는것 같다.
+
+    x = Flatten(input_shape=model_.output_shape[1:])(model_.layers[-1].output)
+    x = Dense(n_classes, activation='softmax')(x)
+    
+    frozen_model = Model(model_.input, x)
+
+    return frozen_model

@@ -5,7 +5,7 @@ import math
 
 # rexnet (네이버꺼)
 def scheduler(epoch):
-    if epoch < 15: #임시
+    if epoch < 15: # efn5 이걸로 해보기
         return 1e-4
     else:
-        return 0.0001 * math.exp(0.1 * (10 - epoch))
+        return 1e-4 * math.exp(0.1 * (15 - epoch))
