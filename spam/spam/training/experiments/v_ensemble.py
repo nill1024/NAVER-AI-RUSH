@@ -11,16 +11,16 @@ classes = ['normal', 'monotone', 'screenshot', 'unknown']
 config = {
     'model': EnsembleModel,
     'fit_kwargs': {
-        'batch_size': 32, #이거 근데 데이터 개수를 정확히 알아야 batch size로 나눌 수 있을 것 같은뎅
-        'epochs_finetune': 1,
-        'epochs_full': 1, # efn의 경우 에폭 15 정도만 줘도 될 듯 아마?
-        'debug': False #디버그하고싶으면 이거 True 로 하면 됨.
+        'batch_size': 128, #resnet계열은 128, efn3는 64, efn5는 64는 모르겠고 32, efn7은 16정도 나와야 함(왠지는 잘...)
+        'epochs_finetune': 3,
+        'epochs_full': 25, # efn의 경우 에폭 15~20, resnet계열은 에폭 30정도면 충분하고 그 밑으로 줘도 대개는 잘 됨
+        'debug': False # 디버그하고싶으면 이거 True 로 하면 됨.
     },
     'model_kwargs': {
         'network_fn': frozen_resnet, #어떤 모델을 선택할지 사실상 여기서 조정하면 됨.
         'network_fn2' : frozen_resnet_i2,
         'network_fn3' : frozen_efnet5,
-        'network_fn4' : frozen_efnet3,
+        'network_fn4' : frozen_resnet,
         'network_kwargs': {
             'input_size': input_size,
             'n_classes': len(classes)

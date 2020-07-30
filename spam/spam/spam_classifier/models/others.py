@@ -10,8 +10,8 @@ def scheduler(epoch):
     else:
         return 1e-4 * math.exp(0.1 * (10 - epoch))
 
-def scheduler15(epoch):
-    if epoch < 15: # resnet 용
+def scheduler20(epoch):
+    if epoch < 20: # resnet 용
         return 1e-4
     else:
-        return 1e-4 * math.exp(0.1 * (15 - epoch))
+        return 1e-4 * math.exp(0.1 * (20 - epoch))

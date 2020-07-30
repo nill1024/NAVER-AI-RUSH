@@ -10,6 +10,7 @@ from keras_preprocessing.image import ImageDataGenerator
 from keras.applications.resnet_v2 import preprocess_input
 import pandas as pd
 from nsml.constants import DATASET_PATH
+from spam.spam_classifier.models import EnsembleModel
 
 from sklearn.preprocessing import MinMaxScaler
 
@@ -97,7 +98,7 @@ class Dataset:
             subset='validation',
             )
 
-        unl_generator = train_datagen.flow_from_directory(
+        unl_gen = train_datagen.flow_from_directory(
             directory=self.base_dir / 'unlabeled',
             batch_size=batch_size,
             target_size=self.img_size[:-1],
@@ -105,19 +106,28 @@ class Dataset:
             classes=['unlabeled']
         )
 
-        
+        unl_files = [str(p.name) for p in (Path(self.base_dir) / 'unlabeled').glob('*.*') if p.suffix not in ['.gif', '.GIF']]
 
-        # val_generator = train_datagen.flow_from_directory( # validation dataset 
-        #     directory=self.base_dir / 'vali',
-        #     batch_size=batch_size,
-        #     target_size=self.img_size[:-1],
-        #     classes=self.classes,
-        #     shuffle=True
-        #     )
+        nsml.load(checkpoint='full',session='nill1024/spam-3/6')
+        nsml.load(checkpoint='full',session='nill1024/spam-3/9')
+        nsml.load(checkpoint='full',session='nill1024/spam-3/8')
+        
+        unl_pred1 = EnsembleModel.net2.predict_generator(unl_gen)
+        unl_pred2 = EnsembleModel.net3.predict_generator(unl_gen)
+        unl_pred3 = EnsembleModel.net4.predict_generator(unl_gen)
+
+        unl_pred = (unl_pred1+unl_pred2+unl_pred3)/3
+        arg_unl = np.argmax(unl_pred,axis=1)
+
+        for i in range(len(arg_unl)):
+            if unl_pred[i][arg_unl[i]] < 0.9:
+                arg_unl[i] = -1
+
+        df_u = pd.DataFrame({'filename': unl_files, 'unl_pred': arg_unl})
 
         assert self.classes == list(iter(train_generator.class_indices))
 
-        return train_generator, val_generator, unl_generator
+        return train_generator, val_generator
 
     def test_gen(self, test_dir: str, batch_size: int):
         """

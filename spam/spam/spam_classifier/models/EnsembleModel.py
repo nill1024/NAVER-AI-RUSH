@@ -45,7 +45,7 @@ class EnsembleModel:
 
         steps_per_epoch_train = int(self.data.len('train') / batch_size) if not self.debug else 2
         model_path_finetune = 'model_finetuned.h5'
-        train_gen, val_gen, unl_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
+        train_gen, val_gen = self.data.train_val_gen(batch_size) # 이 부분이 train data가 들어오는 부분임
         
         #nsml.save(checkpoint='pretuned')# 근데 이게 왜 두개 있는지..?
 
@@ -95,11 +95,9 @@ class EnsembleModel:
 
         self.net1.load_weights(model_path_full)
 
-        nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
-        nsml.load(checkpoint='full',session='nill1024/spam-3/6') # 7번 resi2 209mb net 2 net_fn 2
-        nsml.load(checkpoint='full',session='nill1024/spam-3/9') # 6번 efn3 43.4mb net 3 net_fn 3
-        nsml.load(checkpoint='full',session='nill1024/spam-1/36')
-        
+        #nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
+
+
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
 
@@ -167,7 +165,7 @@ class EnsembleModel:
         ]
         return callbacks
 
-    def evaluate(self, test_dir: str) -> pd.DataFrame:
+    def evaluate(self, test_dir: str, vote=True) -> pd.DataFrame:
         """
 
         이거 오로지 테스트에 쓰이는 함수라는거
@@ -196,12 +194,16 @@ class EnsembleModel:
 
         y_pred = np.argmax(y_average, axis=1)
 
+        if vote == False:
+            ret = pd.DataFrame({'filename': filenames, 'y_pred': y_pred})
+            return ret
+
         for i in range(len(p1)): #voting이 싫다면 이 for문 전체를 없애면 됨
             ma = [0,0,0,0]
             ma[p1[i]] += 1
             ma[p2[i]] += 1
             ma[p3[i]] += 1
-            ma[p4[i]] += 0.9 #efn3 에 1표를 다 주기 때문에 조금 안좋아 지는듯 함. 아무래도 단일 모델 성능이 안좋은 경우면 앙상블에서 voting방식의 성능에 영향을 줄 수 있음
+            ma[p4[i]] += 1 #efn3 에 1표를 다 주기 때문에 조금 안좋아 지는듯 함. 아무래도 단일 모델 성능이 안좋은 경우면 앙상블에서 voting방식의 성능에 영향을 줄 수 있음
                             #이 점 때문에 voting에서 한표를 다 안주는 방식으로 알고리즘을 짜게 되면, 기본적으로 average방식과 그 알고리즘이 유사해짐. average도 가중치를 주고 할 수 있는 거라
                             #물론 얘를 가중치 주는거랑 저 위에걸 가중치 주는거랑은 살짝 다르긴 함. cross_entropy 때문에
             mx = 0
@@ -261,10 +263,10 @@ def bind_model(model: EnsembleModel):
             elif str(Path(f'{dirname}/model').stat().st_size)[0] == '1':
                 model.net3.load_weights(f'{dirname}/model')
                 print("net 3 loaded")
-            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '9':
-                model.net1.load_weights(f'{dirname}/model')
-                print("net 1 loaded")
-            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '4':
+            # elif str(Path(f'{dirname}/model').stat().st_size)[0] == '9':
+            #     model.net1.load_weights(f'{dirname}/model')
+            #     print("net 1 loaded")
+            elif str(Path(f'{dirname}/model').stat().st_size)[0] == '9': #현재 resnet이 net4로 로드됨
                 model.net4.load_weights(f'{dirname}/model')
                 print("net 4 loaded")
         except:
