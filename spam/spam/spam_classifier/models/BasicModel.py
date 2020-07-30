@@ -138,7 +138,7 @@ class BasicModel:
             ModelCheckpoint(model_path, monitor=f'val/{model_prefix}/macro avg/f1-score', verbose=1,
                             save_best_only=True, mode='max'),
             # TODO Change to the score we're using for ModelCheckpoint
-            LearningRateScheduler(scheduler, verbose=0), # 이렇게 하는거 맞나용..?
+            #LearningRateScheduler(scheduler, verbose=0), # 이렇게 하는거 맞나용..?
             EarlyStopping(patience=patience)  # EarlyStopping needs to be placed last, due to a bug fixed in tf2.2
             
             #추가
