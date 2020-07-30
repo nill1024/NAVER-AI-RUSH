@@ -54,7 +54,7 @@ class EnsembleModel:
 
         self.net1.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
                                    steps_per_epoch=steps_per_epoch_train,
-                                   epochs=epochs_finetune,
+                                   epochs=1,
                                    callbacks=self.callbacks_ft(
                                        model_path=model_path_finetune,
                                        model_prefix='last_layer_tuning',
@@ -82,7 +82,7 @@ class EnsembleModel:
         model_path_full = 'model_full.h5'
         self.net1.fit_generator(generator=train_gen,
                                    steps_per_epoch=steps_per_epoch_train,
-                                   epochs=epochs_full,
+                                   epochs=1,
                                    callbacks=self.callbacks(
                                        model_path=model_path_full,
                                        model_prefix='full_tuning',
@@ -98,12 +98,12 @@ class EnsembleModel:
         #nsml.load(checkpoint='full',session='nill1024/spam-3/8') # 3번 resnet 92mb net 1 net_fn 1 (아닐 가능성 있으니 주의)
 
         nsml.load(checkpoint='full',session='nill1024/spam-3/6')
-        nsml.load(checkpoint='full',session='nill1024/spam-3/9')
-        nsml.load(checkpoint='full',session='nill1024/spam-3/8')
+        nsml.load(checkpoint='full',session='nill1024/spam-3/35')
+        nsml.load(checkpoint='full',session='nill1024/spam-1/10')
         
         unl_pred1 = self.net2.predict_generator(unl_gen)
         unl_pred2 = self.net3.predict_generator(unl_gen)
-        unl_pred3 = self.net4.predict_generator(unl_gen)
+        unl_pred3 = self.net1.predict_generator(unl_gen)
 
         unl_pred = (unl_pred1+unl_pred2+unl_pred3)/3
         arg_unl = np.argmax(unl_pred,axis=1)
@@ -116,6 +116,7 @@ class EnsembleModel:
         
         unl_train, unl_val = self.data.labeld_unl(df_u,batch_size)
 
+        model_path_full = 'model_full.h5'
         self.net1.fit_generator(generator=unl_train,
                             steps_per_epoch=steps_per_epoch_train,
                             epochs=epochs_full,
@@ -127,7 +128,8 @@ class EnsembleModel:
                                 classes=self.data.classes),
                             validation_data=val_gen,
                             use_multiprocessing=True,
-                            workers=20) 
+                            workers=20)
+        self.net1.load_weights(model_path_full)
 
         nsml.save(checkpoint='full') #이거 부를 때마다 모델 체크포인트를 남길 수 있는데 나중에 가면 많이 써야할 것 같음.
         #아마 콜백이 있어서 기존 체크포인트가 best였던 모양인데 원래 콜백은 그냥 기본이라고 볼 수 있으므로 full
@@ -196,7 +198,7 @@ class EnsembleModel:
         ]
         return callbacks
 
-    def evaluate(self, test_dir: str, vote=True) -> pd.DataFrame:
+    def evaluate(self, test_dir: str, vote=False) -> pd.DataFrame:
         """
 
         이거 오로지 테스트에 쓰이는 함수라는거
@@ -214,14 +216,14 @@ class EnsembleModel:
         y_pred1 = self.net1.predict_generator(gen) # 아무래도 fit된 모델 기반으로 예측값을 만드는 것 같음. 이걸 기준으로 다시 모델에 피드백시킬 수 있을 것 같다.(특히 unlabeled data)
         y_pred2 = self.net2.predict_generator(gen)
         y_pred3 = self.net3.predict_generator(gen)
-        y_pred4 = self.net4.predict_generator(gen)
+        # y_pred4 = self.net4.predict_generator(gen)
 
-        y_average = (y_pred1+y_pred2+y_pred3+y_pred4) #모델 하나 더 추가할것. 우선은 voting만 만듬
+        y_average = (y_pred1+y_pred2+y_pred3) #모델 하나 더 추가할것. 우선은 voting만 만듬
 
         p1 = np.argmax(y_pred1,axis=1)
         p2 = np.argmax(y_pred2,axis=1)
         p3 = np.argmax(y_pred3,axis=1)
-        p4 = np.argmax(y_pred4,axis=1)
+        # p4 = np.argmax(y_pred4,axis=1)
 
         y_pred = np.argmax(y_average, axis=1)
 
@@ -234,7 +236,7 @@ class EnsembleModel:
             ma[p1[i]] += 1
             ma[p2[i]] += 1
             ma[p3[i]] += 1
-            ma[p4[i]] += 1 #efn3 에 1표를 다 주기 때문에 조금 안좋아 지는듯 함. 아무래도 단일 모델 성능이 안좋은 경우면 앙상블에서 voting방식의 성능에 영향을 줄 수 있음
+            # ma[p4[i]] += 1 #efn3 에 1표를 다 주기 때문에 조금 안좋아 지는듯 함. 아무래도 단일 모델 성능이 안좋은 경우면 앙상블에서 voting방식의 성능에 영향을 줄 수 있음
                             #이 점 때문에 voting에서 한표를 다 안주는 방식으로 알고리즘을 짜게 되면, 기본적으로 average방식과 그 알고리즘이 유사해짐. average도 가중치를 주고 할 수 있는 거라
                             #물론 얘를 가중치 주는거랑 저 위에걸 가중치 주는거랑은 살짝 다르긴 함. cross_entropy 때문에
             mx = 0
@@ -298,13 +300,14 @@ def bind_model(model: EnsembleModel):
             #     model.net1.load_weights(f'{dirname}/model')
             #     print("net 1 loaded")
             elif str(Path(f'{dirname}/model').stat().st_size)[0] == '9': #현재 resnet이 net4로 로드됨
-                model.net4.load_weights(f'{dirname}/model')
-                print("net 4 loaded")
+                #model.net4.load_weights(f'{dirname}/model')
+                model.net1.load_weights(f'{dirname}/model')
+                print("net 1 loaded")
         except:
             model.net1.load_weights(f'{dirname}/model1')
             model.net2.load_weights(f'{dirname}/model2')
             model.net3.load_weights(f'{dirname}/model3')
-            model.net4.load_weights(f'{dirname}/model4')
+            #model.net4.load_weights(f'{dirname}/model4')
 
 
     def save(dirname, **kwargs):
@@ -315,8 +318,8 @@ def bind_model(model: EnsembleModel):
         model.net2.save_weights(filename+'2')
         print(f'Trying to save to {filename}'+'3')
         model.net3.save_weights(filename+'3')
-        print(f'Trying to save to {filename}'+'4')
-        model.net4.save_weights(filename+'4')
+        # print(f'Trying to save to {filename}'+'4')
+        # model.net4.save_weights(filename+'4')
 
     def infer(test_dir, **kwargs):
         return model.evaluate(test_dir)
