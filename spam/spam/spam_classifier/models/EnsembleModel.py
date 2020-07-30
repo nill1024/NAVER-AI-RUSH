@@ -37,11 +37,11 @@ class EnsembleModel:
 
         # 이 과정까지 진행했을 때 디렉토리가 정렬이 되기 때문에 이시점에서 언더샘플링 하던지
 
-        # self.net1.compile(
-        #     loss=self.loss(),
-        #     optimizer=self.optimizer('finetune'),
-        #     metrics=self.fit_metrics()
-        # )
+        self.net1.compile(
+            loss=self.loss(),
+            optimizer=self.optimizer('finetune'),
+            metrics=self.fit_metrics()
+        )
 
         steps_per_epoch_train = int(self.data.len('train') / batch_size) if not self.debug else 2
         
@@ -52,20 +52,20 @@ class EnsembleModel:
         # 이 부분에서 데이터 수정이 들어가야 할 것 같다 아마도
         # fit generator 그냥 학습 시키는 거다. 그니까 여기가 사실상 fit 부분임
 
-        # model_path_finetune = 'model_finetuned.h5'
-        # self.net1.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
-        #                            steps_per_epoch=steps_per_epoch_train,
-        #                            epochs=1,
-        #                            callbacks=self.callbacks_ft(
-        #                                model_path=model_path_finetune,
-        #                                model_prefix='last_layer_tuning',
-        #                                patience=5,
-        #                                val_gen=val_gen,
-        #                                classes=self.data.classes),
-        #                            validation_data=val_gen,
-        #                            use_multiprocessing=True,
-        #                            workers=20)  # TODO change to be dependent on n_cpus
-        # self.net1.load_weights(model_path_finetune)
+        model_path_finetune = 'model_finetuned.h5'
+        self.net1.fit_generator(generator=train_gen, #참고: 이미 network가 resnet 객체인고로 필요없당.
+                                   steps_per_epoch=steps_per_epoch_train,
+                                   epochs=1,
+                                   callbacks=self.callbacks_ft(
+                                       model_path=model_path_finetune,
+                                       model_prefix='last_layer_tuning',
+                                       patience=5,
+                                       val_gen=val_gen,
+                                       classes=self.data.classes),
+                                   validation_data=val_gen,
+                                   use_multiprocessing=True,
+                                   workers=20)  # TODO change to be dependent on n_cpus
+        self.net1.load_weights(model_path_finetune)
         
         # finetuning 먼저 하는 듯
         # finetuning은 초기값을 주기 위해서 하는 과정이라고 보면 된다.
@@ -111,7 +111,7 @@ class EnsembleModel:
 
         print("prediction completed")
         for i in range(len(arg_unl)):
-            if unl_pred[i][arg_unl[i]] < 0.9:
+            if unl_pred[i][arg_unl[i]] < 0.95:
                 arg_unl[i] = -1
 
         df_u = pd.DataFrame({'filename': unl_files, 'unl_pred': arg_unl})
