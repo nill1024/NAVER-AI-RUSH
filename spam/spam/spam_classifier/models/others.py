@@ -4,8 +4,8 @@
 import math
 
 # rexnet (네이버꺼)
-def scheduler(epoch):
-    if epoch < 15: #임시
+def scheduler(epoch, x = 10):
+    if epoch < x: #임시
         return 1e-4
     else:
-        return 0.0001 * math.exp(0.1 * (10 - epoch))
+        return (1e-4) * math.exp(0.1 * (x - epoch))
